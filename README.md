@@ -27,3 +27,14 @@ Now create symlink inside `src/`:
 cd src
 ln -s ../dataset .
 ```
+
+### Lego Simulator
+download (to do)
+```bash
+git clone https://github.com/ma-haha-hehe/lego_sim.git
+```
+
+### Other
+```bash
+pip install pyyaml
+```
