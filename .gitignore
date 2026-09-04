@@ -6,3 +6,5 @@ src/tampanda
 dataset
 src/dataset
 lego_sim
+out
+src/MUJOCO_LOG.TXT
