@@ -1,5 +1,5 @@
 (define (domain lego-coarse)
-  (:requirements :strips :typing :existential-preconditions)
+  (:requirements :typing :existential-preconditions :negative-preconditions :derived-predicates)
 
   (:types
     ; item
@@ -14,19 +14,16 @@
 
   (:predicates
     (shape ?b - brick ?d - dim)
-    (is ?b - brick ?c - color)
+    (is_color ?b - brick ?c - color)
     (at ?b - brick ?l - location)
     (stacked_on ?a - brick ?b - brick)
     (clear ?l - location)
-
-    ; (config-for ?c - grasp-config ?o - brick) ; static: c is a candidate grasp for o
-    ; (ik-feasible ?c - grasp-config)           ; geometric: grasp c is collision-free (sensed)
-    ; (accessible ?o - brick)                   ; geometric: o has >=1 feasible grasp (sensed)
-    ; (obstructs ?a - brick ?b - brick)         ; geometric: a blocks b's approach (sensed)
-    ; (holding ?b - brick ?c - grasp-config)
-
     (holding ?b - brick)
     (hand-empty)
+  )
+
+  (:derived (clear ?l - location)
+    (not (exists (?b - brick) (at ?b ?l)))
   )
 
   (:action pick
@@ -51,7 +48,6 @@
     )
     :effect (and
       (not (holding ?b))
-      (not (clear ?to))
       (at ?b ?to)
       (hand-empty)
     )
