@@ -66,8 +66,8 @@
     )
     :effect (and
       (not (holding ?b))
-      (at ?o ?to)
-      (stacked_on ?o ?on)
+      (at ?b ?to)
+      (stacked_on ?b ?on)
       (hand-empty)
     )
   )
