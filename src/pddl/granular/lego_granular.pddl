@@ -22,7 +22,7 @@
     ; IF NOT: then precondition of place action always true if eg some orientation missing
     ; => depends on parser
     (above ?c1 - cell ?c2 - cell)  ; static: c1 directly one layer above c2
-    (is-ground ?c - cell) ; static: NOTE IF THIS NOT SET FOR SOME CELLS, THEN PROBLEM UNSOLVABLE
+    (is_ground ?c - cell) ; static: NOTE IF THIS NOT SET FOR SOME CELLS, THEN PROBLEM UNSOLVABLE
 
     (stacked_on ?b1 - brick ?b2 - brick) ; derived: b1 stacked on b2
 
@@ -68,8 +68,8 @@
       (forall (?c - cell)
         (imply 
             (exists (?d - type) (and (shape ?b ?d) (footprint ?d ?o ?to ?c)))           ; for all cells if they WILL belong to our footprint
-            (and ((not occupied ?c))                                                    ; those cells must be unoccupied AND
-                (or (and (is-ground ?c))                                                ; either be ground or
+            (and (not (occupied ?c))                                                    ; those cells must be unoccupied AND
+                (or (is_ground ?c)                                                      ; either be ground or
                     (exists (?below - cell) (and (above ?c ?below) (occupied ?below)))  ; have cells below that are occupied
                 )
             )
@@ -86,4 +86,6 @@
 
 
 ; some notes:
-; - theoretically if overhang but cell beneath unoccupied, planner could place brick there, however not reachable!
+; - planner can place although approach obstructed
+;    - imagine overhang but cells beneath unoccupied: planner could place brick below overhand, however not reachable!
+; - the precondition of place relies on every footprint defined
