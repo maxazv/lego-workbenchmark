@@ -6,14 +6,14 @@
     ; location
     ; grasp-config
 
-    dim
+    type
     brick
     color
     location
   )
 
   (:predicates
-    (shape ?b - brick ?d - dim)
+    (shape ?b - brick ?d - type)
     (is_color ?b - brick ?c - color)
     (at ?b - brick ?l - location)
     (stacked_on ?a - brick ?b - brick)

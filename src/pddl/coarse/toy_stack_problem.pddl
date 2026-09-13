@@ -3,7 +3,7 @@
   
   (:objects
     brick_0 brick_1 brick_2 - brick
-    dim_2x2 - dim
+    dim_2x2 - type
     red yellow - color
     pick_a pick_b pick_c asm_base - location
   )

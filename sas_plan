@@ -1,0 +1,5 @@
+(pick brick_1 pick_b)
+(stack brick_1 brick_2 pick_c)
+(pick brick_2 pick_c)
+(place brick_2 asm_base)
+; cost = 4 (unit cost)
