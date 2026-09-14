@@ -22,7 +22,7 @@
     (footprint t2x1 deg0 c0_0 c0_0) (footprint t2x1 deg0 c0_0 c1_0)
     ; base_R anchored c2_0 covers c2_0, c3_0
     (footprint t2x1 deg0 c2_0 c2_0) (footprint t2x1 deg0 c2_0 c3_0)
-    ; bridge anchored c0_1 covers all four layer-1 cells — needs BOTH bases
+    ; bridge anchored c0_1 covers all four layer-1 cells (needs BOTH bases)
     (footprint t4x1 deg0 c0_1 c0_1) (footprint t4x1 deg0 c0_1 c1_1)
     (footprint t4x1 deg0 c0_1 c2_1) (footprint t4x1 deg0 c0_1 c3_1))
 

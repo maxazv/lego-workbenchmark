@@ -12,10 +12,10 @@ COLORS = ["red", "blue", "green", "yellow"]
 
 
 NUM_BLOCKS_INIT = 3
-print(random.choice(TYPES))
+# print(random.choice(TYPES))
 
 
-objs = {"bricks": [], "types": set(), "colors": set(), "locations": []}
+objs = {"brick": [], "type": [], "color": [], "location": []}
 
 init_preds = {"shape": {}, "is_color": {}, "at": {}}
 
@@ -31,10 +31,10 @@ for i in range(NUM_BLOCKS_INIT):
     brick_color = random.choice(COLORS)
     brick_location = f"pick_{i}"
 
-    objs["bricks"].append(brick_id)
-    objs["types"].add(brick_type)
-    objs["colors"].add(brick_color)
-    objs["locations"].append(brick_location)
+    objs["brick"].append(brick_id)
+    objs["type"].append(brick_type)
+    objs["color"].append(brick_color)
+    objs["location"].append(brick_location)
 
     init_preds[brick_id] = {
         "shape": brick_type,
@@ -43,7 +43,7 @@ for i in range(NUM_BLOCKS_INIT):
     }
 
 
-print(objs)
+# print(objs)
 print(init_preds)
 
 # NOTE: we can have some nonsensical configurations but if we solve those, then also the sensical ones
@@ -59,12 +59,12 @@ num_blocks_goal = random.randint(1, NUM_BLOCKS_INIT)
 # pick random blocks to be base (ie not stacked on other blocks)
 num_blocks_base = random.randint(1, num_blocks_goal)
 for i in range(num_blocks_base):
-    brick_id = random.choice(objs["bricks"])
+    brick_id = random.choice(objs["brick"])
     asm_loc = f"asm_{i}"
 
     goal_preds[brick_id] = {**init_preds[brick_id], "at": asm_loc}
 
-print(goal_preds)
+# print(goal_preds)
 
 # define rest (stacked on one another)
 
@@ -82,3 +82,64 @@ for i in range(num_blocks_goal - num_blocks_base):
     stack_candidates = stack_candidates - {base_id} | {brick_id}
 
 print(goal_preds)
+
+#
+# building pddl string
+#
+
+problem_name = f"rand_problem_{random.randint(0, 10000)}"
+
+
+objs_str = ""
+for key in objs.keys():
+    objs_str += "    " + " ".join(objs[key]) + f" - {key}\n"
+objs_str = objs_str[:-1]  # remove last /n
+
+init_str = "\n"
+for brick_id in init_preds:
+    for pred in init_preds[brick_id]:
+        init_str += "    "
+        init_str += f"{pred} {brick_id} {init_preds[brick_id][pred]}" 
+        init_str += "\n"
+    init_str += "\n"
+init_str = init_str[:-2]
+
+
+goal_exists_vars = " ".join(f"?b{i}" for i in range(len(goal_preds)))
+goal_lines = []
+for i, brick_id in enumerate(goal_preds):
+    goal_brick_id = f"?b{i}"
+    predicates = [
+        f"({pred} {goal_brick_id} {value})"
+        for pred, value in goal_preds[brick_id].items()
+    ]
+    goal_lines.append(" ".join(predicates))
+
+goal_str = (
+    f"    (exists ({goal_exists_vars} - brick)\n"
+    f"      (and\n"
+    + "".join(f"           {line}\n" for line in goal_lines)
+    + "      )\n"
+    f"    )"
+)
+
+pddl_problem = f"""
+(define (problem {problem_name})
+  (:domain lego-coarse)
+
+  (:objects
+{objs_str}
+  )
+
+  (:init
+    (hand-empty)
+{init_str}
+  )
+
+  (:goal
+{goal_str}
+  )
+)
+"""
+
+print(pddl_problem)
