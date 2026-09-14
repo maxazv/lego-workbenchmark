@@ -15,7 +15,7 @@ NUM_BLOCKS_INIT = 3
 # print(random.choice(TYPES))
 
 
-objs = {"brick": [], "type": [], "color": [], "location": []}
+objs = {"brick": [], "type": set(), "color": set(), "location": []}
 
 init_preds = {"shape": {}, "is_color": {}, "at": {}}
 
@@ -32,8 +32,8 @@ for i in range(NUM_BLOCKS_INIT):
     brick_location = f"pick_{i}"
 
     objs["brick"].append(brick_id)
-    objs["type"].append(brick_type)
-    objs["color"].append(brick_color)
+    objs["type"].add(brick_type)
+    objs["color"].add(brick_color)
     objs["location"].append(brick_location)
 
     init_preds[brick_id] = {
@@ -61,6 +61,7 @@ num_blocks_base = random.randint(1, num_blocks_goal)
 for i in range(num_blocks_base):
     brick_id = random.choice(objs["brick"])
     asm_loc = f"asm_{i}"
+    objs["location"].append(asm_loc)
 
     goal_preds[brick_id] = {**init_preds[brick_id], "at": asm_loc}
 
@@ -75,7 +76,9 @@ for i in range(num_blocks_goal - num_blocks_base):
     brick_id = random.choice(list(rem_candidates))
     base_id = random.choice(list(stack_candidates))
 
-    goal_preds[brick_id] = {**init_preds[brick_id], "stacked_on": base_id}
+    brick_preds = copy.deepcopy(init_preds[brick_id])
+    brick_preds.pop("at", None)
+    goal_preds[brick_id] = {**brick_preds, "stacked_on": base_id}
 
     # remove from remaining and add as candidate base to be stacked on
     rem_candidates.remove(brick_id)
@@ -99,7 +102,7 @@ init_str = "\n"
 for brick_id in init_preds:
     for pred in init_preds[brick_id]:
         init_str += "    "
-        init_str += f"{pred} {brick_id} {init_preds[brick_id][pred]}" 
+        init_str += f"({pred} {brick_id} {init_preds[brick_id][pred]})" 
         init_str += "\n"
     init_str += "\n"
 init_str = init_str[:-2]
@@ -142,4 +145,6 @@ pddl_problem = f"""
 )
 """
 
-print(pddl_problem)
+# print(pddl_problem)
+with open(f"{problem_name}.pddl", "w") as f:
+    f.write(pddl_problem)
