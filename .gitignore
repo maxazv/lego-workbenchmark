@@ -7,3 +7,5 @@ dataset
 src/dataset
 lego_sim
 downward
+out
+MUJOCO_LOG.TXT
