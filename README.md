@@ -56,3 +56,9 @@ Example inside of `lego-workbenchmark`:
 ```bash
 pip install pyyaml
 ```
+
+
+TODO convert to emitter stuff
+```bash
+python path/to/domain/emitter.py path/to/yaml_problems/
+```
