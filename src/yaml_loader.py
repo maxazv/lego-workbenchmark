@@ -106,7 +106,7 @@ def load_task(benchmark_path, ground_truth_path=None):
             initial_by_name = {b["name"]: b for b in yaml.safe_load(f)["initial_blocks"]}
 
     lat = Lattice()
-    lat.calibrate(target_blocks)  # to get grid offset
+    lat.calibrate(target_blocks)  # to assert same offset and safe that offset
 
     bricks = []
     for b in target_blocks:
@@ -122,6 +122,11 @@ def load_task(benchmark_path, ground_truth_path=None):
             initial=tuple(init["pos"]) if init else None,
             initial_yaw=int(init["rotation"][2]) if init else None,
         ))
+
+    # NOTE: no lattice for initial positions (initial positions not on grid)
+    # lat_init = Lattice()
+    # lat_init.calibrate(list(initial_by_name.values()))
+    
     return bricks, lat
 
 
@@ -143,3 +148,15 @@ def supporters(bricks):
                 sup.append((below, shared))
         out[b.name] = sorted(sup, key=lambda t: -t[1])
     return out
+
+
+# distance matrix in #cells: ie calculate distance to each bricks cell take min cell into distance matrix
+
+# TODO: obstructors ie horizontal obstructions
+# - obstructors for both initial and target cells
+# - recall TAMP regrounds and replans after each action execution
+def obstructors(bricks, num_cells: int):
+    # brick a obstructs brick b if distance from a to b is <= num_cells
+    for b in bricks:
+        # TODO
+        raise NotImplementedError
