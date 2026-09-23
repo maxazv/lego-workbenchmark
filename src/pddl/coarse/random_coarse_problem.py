@@ -11,7 +11,7 @@ COLORS = ["red", "blue", "green", "yellow"]
 #         print(f"{dim[i]}x{dim[j]}")
 
 
-NUM_BLOCKS_INIT = 3
+NUM_BLOCKS_INIT = 5
 # print(random.choice(TYPES))
 
 
