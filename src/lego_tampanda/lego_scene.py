@@ -40,7 +40,7 @@ def make_lego_builder(bricks: list[dict]) -> ArmSceneBuilder:
     return b
 
 
-# ---------------------------------------------------------------- pose helpers
+
 def yaw_quat(yaw: float) -> np.ndarray:
     return np.array([np.cos(yaw / 2), 0.0, 0.0, np.sin(yaw / 2)])
 
@@ -57,10 +57,9 @@ def table_top_z(env) -> float:
     return float(env.data.geom_xpos[g][2] + env.model.geom_size[g][2])
 
 
-# -------------------------------------------------------------------- spawning
-# Pick area on the table (robot base = world origin), clear of the assembly area.
+
 SPAWN_REGION = {"x": (0.00, 0.30), "y": (0.35, 0.60)}
-SPAWN_MIN_DIST = 0.09      # centre distance, leaves room for the open gripper
+SPAWN_MIN_DIST = 0.09      
 
 
 def spawn_bricks(env, product: dict, seed: int) -> None:
@@ -82,11 +81,8 @@ def spawn_bricks(env, product: dict, seed: int) -> None:
     env.rest(1.0)
 
 
-# ------------------------------------------------------------------ stud latch
 class StudLatch:
-    """Stand-in for Duplo studs on plain boxes: a pinned brick is held at the pose it
-    had when pinned, the way ``attach_object_to_ee`` holds a carried one.  lego_sim's
-    ROS bridge does the same with its "fake welds" in snap mode."""
+    """Stand-in for Duplo studs on plain boxes.  The executor can pin a brick in place, and the latch will keep it there"""
 
     def __init__(self, env):
         self.env, self.pins = env, {}

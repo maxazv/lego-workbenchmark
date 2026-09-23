@@ -7,7 +7,7 @@ import csv, sys, traceback
 from .run_task import run
 
 out, seeds, products = sys.argv[1], [int(s) for s in sys.argv[2].split(",")], sys.argv[3:]
-fields = ["product", "seed", "planned", "plan_length", "planning_time_s", "executed",
+fields = ["product", "seed", "domain", "planned", "plan_length", "planning_time_s", "executed",
           "failed_step", "latch", "placed", "total", "success"]
 with open(out, "w", newline="") as f:
     writer = csv.DictWriter(f, fieldnames=fields)

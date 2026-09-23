@@ -1,5 +1,11 @@
 """Task side: load a product YAML (lego_sim schema v1; ``products/`` holds 16 official
-WorkBenchMark tasks converted to it) and derive what the PDDL problem needs from it."""
+WorkBenchMark tasks converted to it) and derive what the PDDL problem needs from it.
+
+The symbolic layer mirrors ``emit_coarse.py`` so that the problems the bridge grounds
+from the simulator match the emitted ones: one ``pick_<brick>`` location per brick, one
+``asm_<root>`` location per support-tree root, and a single parent per brick (the
+supporter sharing the most studs).
+"""
 import re
 from pathlib import Path
 
@@ -12,6 +18,9 @@ PRODUCTS = [Path(__file__).parent / "products"]
 
 # Where the product's (0, 0, 0) sits on the TAMPanda table (robot base = world origin).
 ASSEMBLY_ORIGIN = np.array([0.45, 0.50])
+
+STUD_PITCH = 0.016
+DIM = {"brick_4x2": "t4x2", "brick_2x2": "t2x2"}      # emit_coarse.DIM
 
 
 def pddl_name(block_id: str) -> str:
@@ -38,6 +47,15 @@ def footprint(block: dict) -> tuple[float, float]:
     return (sy, sx) if quarter else (sx, sy)
 
 
+def shared_studs(a: dict, b: dict) -> int:
+    """Studs in the xy overlap of two target footprints (what ``yaml_loader.supporters`` counts)."""
+    (ax, ay, _), (bx, by, _) = a["target"]["position"], b["target"]["position"]
+    (aw, ad), (bw, bd) = footprint(a), footprint(b)
+    ox = min(ax + aw / 2, bx + bw / 2) - max(ax - aw / 2, bx - bw / 2)
+    oy = min(ay + ad / 2, by + bd / 2) - max(ay - ad / 2, by - bd / 2)
+    return int(round(max(ox, 0.0) * max(oy, 0.0) / STUD_PITCH ** 2))
+
+
 def support_graph(product: dict) -> dict[str, set[str]]:
     """Bricks lying directly under each brick in the target product."""
     def overlaps(a, b, tol=0.002):
@@ -54,6 +72,26 @@ def support_graph(product: dict) -> dict[str, set[str]]:
         supports[upper["id"]] = {b["id"] for b in below
                                  if abs(b["target"]["position"][2] - top) < 1e-6}
     return supports
+
+
+def parent_map(product: dict) -> dict[str, str]:
+    """One supporter per brick, the emitter's rule: most shared studs, ties by file order.
+    The coarse domain's ``stacked_on`` can only record one; a beam on two pillars keeps one."""
+    blocks = {b["id"]: b for b in product["blocks"]}
+    order = {b["id"]: i for i, b in enumerate(product["blocks"])}
+    return {b: max(below, key=lambda s: (shared_studs(blocks[b], blocks[s]), -order[s]))
+            for b, below in support_graph(product).items() if below}
+
+
+def assembly_locations(product: dict) -> dict[str, str]:
+    """Brick id -> ``asm_<root>``, the location of the support tree it belongs to."""
+    parent = parent_map(product)
+
+    def root(b):
+        while b in parent:
+            b = parent[b]
+        return b
+    return {b["id"]: f"asm_{root(b['id'])}" for b in product["blocks"]}
 
 
 def world_target(block: dict, table_z: float) -> tuple[np.ndarray, float]:

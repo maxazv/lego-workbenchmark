@@ -6,6 +6,7 @@ PRODUCT is a YAML path or a name found in lego_task.PRODUCTS, e.g. tower5,
 off_tier1_task_001, off_tier2_task_001.
 """
 import argparse, contextlib, io, json, tempfile, time
+from pathlib import Path
 
 import numpy as np
 from unified_planning.shortcuts import get_environment
@@ -37,7 +38,8 @@ def run(product_name, seed=0, domain=DEFAULT_DOMAIN, view=False, verbose=True, l
     with tempfile.TemporaryDirectory() as tmp, contextlib.chdir(tmp):
         plan = bridge.plan(objects, goals, planner_name="fast-downward")
     plan_time = time.perf_counter() - start
-    summary = {"product": product["product"]["name"], "seed": seed, "planned": plan is not None,
+    summary = {"product": product["product"]["name"], "seed": seed, "domain": Path(domain).stem,
+               "planned": plan is not None,
                "plan_length": len(plan or []), "planning_time_s": round(plan_time, 3),
                "executed": False, "failed_step": None, "latch": latch}
 
