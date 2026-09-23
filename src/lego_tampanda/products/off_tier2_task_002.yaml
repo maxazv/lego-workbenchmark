@@ -1,0 +1,31 @@
+schema_version: 1
+product:
+  name: tier2_task_002
+blocks:
+- id: b4x2_brick_1
+  type: brick_4x2
+  color: red
+  target:
+    position:
+    - 0.0
+    - 0.0
+    - 0.0
+    yaw_deg: 90.0
+- id: b2x2_brick_2
+  type: brick_2x2
+  color: blue
+  target:
+    position:
+    - 0.0
+    - -0.016
+    - 0.0191
+    yaw_deg: 0.0
+- id: b2x2_brick_3
+  type: brick_2x2
+  color: red
+  target:
+    position:
+    - 0.0
+    - 0.0
+    - 0.0382
+    yaw_deg: 0.0

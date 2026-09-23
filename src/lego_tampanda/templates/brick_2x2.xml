@@ -1,0 +1,8 @@
+<body pos="0 0 0">
+  <joint name="_freejoint" type="free"/>
+  <!-- Duplo 2x2 as a plain box: 32 x 32 x 19.2 mm, 12 g (lego_sim part registry).
+       Height is the dataset's layer pitch, so stacked targets touch exactly. -->
+  <inertial mass="0.012" pos="0 0 0" diaginertia="0.00001 0.00001 0.00001"/>
+  <geom name="_geom" type="box" size="0.016 0.016 0.0096" rgba="0.8 0.2 0.2 1"
+        solimp="0.99 0.99 0.01" solref="0.02 1"/>
+</body>

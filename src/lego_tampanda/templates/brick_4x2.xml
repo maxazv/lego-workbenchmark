@@ -1,0 +1,7 @@
+<body pos="0 0 0">
+  <joint name="_freejoint" type="free"/>
+  <!-- Duplo 4x2 as a plain box: 64 x 32 x 19.2 mm, 22 g (lego_sim part registry). -->
+  <inertial mass="0.022" pos="0 0 0" diaginertia="0.00001 0.00002 0.00002"/>
+  <geom name="_geom" type="box" size="0.032 0.016 0.0096" rgba="0.8 0.2 0.2 1"
+        solimp="0.99 0.99 0.01" solref="0.02 1"/>
+</body>

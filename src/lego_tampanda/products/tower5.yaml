@@ -1,0 +1,9 @@
+schema_version: 1
+product:
+  name: tower5
+blocks:
+  - {id: b1, type: brick_2x2, color: red,    target: {position: [0.0, 0.0, 0.0],    yaw_deg: 0}}
+  - {id: b2, type: brick_2x2, color: green,  target: {position: [0.0, 0.0, 0.0192], yaw_deg: 0}}
+  - {id: b3, type: brick_2x2, color: blue,   target: {position: [0.0, 0.0, 0.0384], yaw_deg: 0}}
+  - {id: b4, type: brick_2x2, color: yellow, target: {position: [0.0, 0.0, 0.0576], yaw_deg: 0}}
+  - {id: b5, type: brick_2x2, color: white,  target: {position: [0.0, 0.0, 0.0768], yaw_deg: 0}}
