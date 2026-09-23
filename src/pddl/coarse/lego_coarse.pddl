@@ -1,5 +1,5 @@
 (define (domain lego-coarse)
-  (:requirements :typing :existential-preconditions :negative-preconditions :derived-predicates)
+  (:requirements :typing :existential-preconditions :negative-preconditions)
 
   (:types
     ; item
@@ -17,20 +17,23 @@
     (is_color ?b - brick ?c - color)
     (at ?b - brick ?l - location)
     (stacked_on ?a - brick ?b - brick)
-    (clear ?l - location)
     (holding ?b - brick)
     (hand-empty)
   )
 
-  (:derived (clear ?l - location)
-    (not (exists (?b - brick) (at ?b ?l)))
-  )
+  ;; "clear ?l" used to be a derived predicate, (not (exists (?b) (at ?b ?l))).
+  ;; unified_planning (the parser behind TAMPanda's DomainBridge) has no support
+  ;; for :derived, so the definition is inlined where it was used, in `place`.
+  ;; Same semantics, and problem files never mention it, so they stay valid.
 
   (:action pick
     :parameters (?b - brick ?from - location)
     :precondition (and
       (at ?b ?from)
       (hand-empty)
+      ;; nothing stacked on it: without this the planner stacks bricks in the
+      ;; pick area and then "picks" the loaded base brick, which the robot cannot do
+      (not (exists (?c - brick) (stacked_on ?c ?b)))
     )
     :effect (and
       (not (at ?b ?from))
@@ -44,7 +47,7 @@
     :parameters (?b - brick ?to - location)
     :precondition (and
       (holding ?b)
-      (clear ?to)
+      (not (exists (?c - brick) (at ?c ?to)))   ; location is clear
     )
     :effect (and
       (not (holding ?b))
