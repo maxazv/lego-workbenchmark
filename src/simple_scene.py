@@ -60,8 +60,10 @@ def wrap(deg):
 
 class SimpleLegoScene:
     """
-    Builds the env in TAMPanda (table + bricks) and executor for motion planning (RRTStar, GraspPlanner, PickPlaceExecutor).
-    For PickPlaceExecutor see (https://snoato.github.io/TAMPanda/tutorial.html).
+    Builds: 
+        - TAMPanda environment (table + bricks) from Brick representatioin (see yaml_loader.Brick)
+        - Executor for motion planning (RRTStar, GraspPlanner, PickPlaceExecutor)
+            - for PickPlaceExecutor see (https://snoato.github.io/TAMPanda/tutorial.html).
     """
     def __init__(self, bricks: list[Brick], template_dir="block_templates", layout=Layout(), rate=200.0):
         # bricks we get from yaml_loader.load_task
