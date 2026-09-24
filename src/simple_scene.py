@@ -228,6 +228,10 @@ def make_bridge(domain_path, scene: SimpleLegoScene):
     @bridge.action("stack")
     def exec_stack(env, fluents, b, on):
         b, on = real_name[b], real_name[on]
+        # FIXME: should get current position of on and place there, not to target_pose
+        # pos, half, quat = env.get_object_position(b), env.get_object_half_size(b), env.get_object_orientation(b)
+        # target_pos = pos + half
+        # NOTE: stack assumes that brick 'on' is already at its target pose => we can stack our brick to target pose (which is above)
         if not _place_at(env, b, scene.target_pose[b], below=on):
             return False, {}
         scene._held = None

@@ -23,6 +23,7 @@ def support_tree(bricks: list[Brick]):
  
  
 def root_location(root_name: str) -> str:
+    """target location names in bridge"""
     return f"asm_{root_name}"
  
  
