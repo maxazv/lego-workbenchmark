@@ -4,7 +4,7 @@ from yaml_loader import load_task
 import emit_coarse, emit_granular
 
 dataset_root, tier, kind = sys.argv[1:4]
-out_dir = f"problems_{kind}/{tier}"
+out_dir = f"generated/problems_{kind}/{tier}"
 os.makedirs(out_dir, exist_ok=True)
 for path in sorted(glob.glob(f"{dataset_root}/ground_truth/{tier}/task_*.yaml")):
     task_id = os.path.splitext(os.path.basename(path))[0]
