@@ -2,36 +2,38 @@
   (:requirements :typing :negative-preconditions)
 
   (:types
-    type
+    ; color
+    ; location  ; NOTE: we dont need target locations anymore (we prolly dont need locations altogether)
+    ;type
+
     brick
-    color
-    location  ; NOTE: we dont need target locations anymore
   )
 
   (:predicates
-    (shape ?b - brick ?d - type)
-    (is_color ?b - brick ?c - color)
-    (at ?b - brick ?l - location)
-    (at-target ?b - brick)
-    (stacked_on ?a - brick ?b - brick)
+    ; (is_color ?b - brick ?c - color)
+    ; (at ?b - brick ?l - location)
+    ; (clear ?l - location)
+    ; (shape ?b - brick ?d - type)
+
+    (is-root ?b - brick)  ; not stacked on any brick
+    (at-target ?b - brick)  ; brick placed correctly in the structure (for root or stacked bricks)
     (top-clear ?b - brick)  ; nothing currently stacked on ?b
-    (clear ?l - location)
+    (stacked_on ?a - brick ?b - brick)
     (holding ?b - brick)
     (hand-empty)
   )
 
   (:action pick
-    :parameters (?b - brick ?from - location)
+    :parameters (?b - brick)
     :precondition (and
-      (at ?b ?from)
       (hand-empty)
       (top-clear ?b)
     )
     :effect (and
-      (not (at ?b ?from))
+      ; (not (at ?b ?from))
       (not (hand-empty))
       (holding ?b)
-      (clear ?from)
+      ; (clear ?from)
     )
   )
 
@@ -66,7 +68,7 @@
   ; )
 
   ; should only be used for root bricks
-  (:action placeToTarget
+  (:action place
     :parameters (?b - brick)
     :precondition (and
       (holding ?b)
@@ -90,10 +92,12 @@
       (not (holding ?b))
       (not (top-clear ?on))
       (stacked_on ?b ?on)
+      (at-target ?b)
       (hand-empty)
     )
   )
 )
 
-; when assembling it only matters how things are stacked... the order should not matter too much
-; usually going layer by layer should workout and maybe some stability constraints
+
+; Problems:
+;   - no opportunity for TAMP => if plan fails, its over
