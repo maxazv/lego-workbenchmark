@@ -10,24 +10,35 @@ from yaml_loader import Brick, supporters
 
 DIM = {"brick_4x2": "t4x2", "brick_2x2": "t2x2"}
 
-def emit_problem(bricks: list[Brick], problem_name: str) -> str:
-    sup = supporters(bricks)
-    parent = {}  # child to parent (support brick) mapping
-    for b in bricks:
-        if sup[b.name]:
-            parent[b.name] = sup[b.name][0][0]
-            if len(sup[b.name]) > 1:
-                names = [s.name for s, _ in sup[b.name]]
-                print(f"  WARN {problem_name}: {b.name} rests on {names}; coarse domain keeps only {parent[b.name].name}")
 
-    # build adjacency-list based on support (each parent has list of children it directly supports)
-    roots = [b for b in bricks if b.name not in parent]
+def support_tree(bricks: list[Brick]):
+    """Parent to child mapping (ie brick b laying on top to brick sup[b.name] laying below)"""
+    sup = supporters(bricks)
+    parent = {b.name: sup[b.name][0][0] for b in bricks if sup[b.name]}
     children = {}
     for c, p in parent.items():
         children.setdefault(p.name, []).append(c)
+    multi = {b.name: [s.name for s, _ in sup[b.name]] for b in bricks if len(sup[b.name]) > 1}
+    return parent, children, multi
+ 
+ 
+def root_location(root_name: str) -> str:
+    return f"asm_{root_name}"
+ 
+ 
+def pick_location(brick_name: str) -> str:
+    return f"pick_{brick_name}"
 
-    pick_loc = {b.name: f"pick_{b.name}" for b in bricks}
-    root_loc = {r.name: f"asm_{r.name}" for r in roots}
+
+def emit_problem(bricks: list[Brick], problem_name: str) -> str:
+    # build adjacency-list based on support (each parent has list of children it directly supports)
+    parent, children, multi = support_tree(bricks)
+    for n, names in multi.items():
+        print(f"  WARN {problem_name}: {n} rests on {names}; coarse domain keeps only {parent[n].name}")
+    roots = [b for b in bricks if b.name not in parent]
+ 
+    pick_loc = {b.name: pick_location(b.name) for b in bricks}
+    root_loc = {r.name: root_location(r.name) for r in roots}
     by_name = {b.name: b for b in bricks}
 
     objects = [

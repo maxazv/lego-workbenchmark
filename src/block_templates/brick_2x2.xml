@@ -1,6 +1,7 @@
 <body pos="0 0 0">
   <joint name="_freejoint" type="free"/>
-  <inertial mass="0.064" pos="0 0 0" diaginertia="0.0001 0.0001 0.0001"/>
-  <geom name="_geom" type="box" size="0.016 0.016 0.0096" rgba="0.8 0.2 0.2 1"
-        solimp="0.99 0.99 0.01" solref="0.02 1"/>
+  <!-- MuJoCo box size = HALF-extents. Full size: 0.032 0.032 0.0191 m -->
+  <inertial mass="0.03" pos="0 0 0" diaginertia="0.00001 0.00001 0.00001"/>
+  <geom name="_geom" type="box" size="0.016 0.016 0.00955" rgba="0.8 0.2 0.2 1"
+        friction="1.5 0.05 0.005" solimp="0.99 0.99 0.01" solref="0.02 1"/>
 </body>
