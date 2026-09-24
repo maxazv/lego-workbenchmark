@@ -159,9 +159,99 @@ def build_objects_and_goal(bricks: list[Brick]):
     return objects, goals
 
 
-def make_bridge(domain_path, scene: SimpleLegoScene):
+def table_body(env, table_geom="table_surface"):
+    """Name of the body owning the table top geom (weld parent for bottom-layer bricks)."""
+    import mujoco
+    g = mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_GEOM, table_geom)
+    return mujoco.mj_id2name(env.model, mujoco.mjtObj.mjOBJ_BODY, env.model.geom_bodyid[g])
+
+
+def place_and_weld(scene, clutch, brick, place_center, ee_quat, target, weld_parent, below=None,
+                   approach_height=0.15, snap_tol_xy=0.008, snap_tol_z=0.006, snap_tol_yaw=12.0):
+    """Copy of PickPlaceExecutor.place() with the stud clutch engaged at the right moment:
+    after the descent (brick hovering place_clearance above its seat) and BEFORE the gripper opens.
+
+    If the brick is within tolerance of its target, it is snapped onto the exact target pose
+    (the "click" onto the studs, removes the place_clearance gap) and welded to weld_parent.
+    Out of tolerance -> no weld, the brick is released to physics and False is returned.
+    """
+    ex, env = scene.executor, scene.env
+    ee_place = place_center.copy()
+    ee_place[2] += GRASP_CONTACT_OFFSET + scene.layout.place_clearance
+    ee_approach = ee_place.copy()
+    ee_approach[2] += approach_height
+
+    env.add_collision_exception(brick)
+    if below is not None:
+        env.add_collision_exception(below)
+
+    # 1. approach above the placement (attachment still active, brick rides along)
+    path = ex.planner.plan_to_pose(ee_approach, ee_quat, dt=0.005, max_iterations=ex.max_plan_iters)
+    if path is None:
+        print("[place_and_weld] approach plan failed")
+        ex._clear_exceptions(brick, below)
+        return False
+    env.execute_path(path, ex.planner, step_size=ex.approach_step_size)
+    env.wait_idle(settle_steps=ex.settle_steps)
+
+    # 2. descend. Unlike ex.place() we keep the kinematic attachment on, so the brick cannot slip
+    #    in the fingers. The descent stops place_clearance above the seat, so it never presses the target.
+    path = ex.planner.plan_to_pose(ee_place, ee_quat, dt=0.005, max_iterations=ex.max_plan_iters)
+    if path is None:
+        print("[place_and_weld] descent plan failed")
+        ex._clear_exceptions(brick, below)
+        return False
+    env.execute_path(path, ex.planner, step_size=ex.place_step_size)
+    env.wait_idle(settle_steps=ex.settle_steps)
+
+    # 3. CLUTCH: check tolerance, snap onto target, weld -- while still held
+    env.detach_object()
+    welded = True
+    if clutch is not None:
+        tpos, tyaw = target
+        sym = SYMMETRY[scene.bricks[brick].type]
+        p = env.get_object_position(brick)
+        yaw_now = yaw_of(env.get_object_orientation(brick))
+        dyaw = wrap(tyaw - yaw_now)
+        dyaw = wrap(dyaw - sym * round(dyaw / sym))            # closest symmetric equivalent
+        err_xy = float(np.linalg.norm(p[:2] - tpos[:2]))
+        err_z = float(p[2] - tpos[2])                          # ~ +place_clearance expected
+        if err_xy < snap_tol_xy and -snap_tol_z < err_z < scene.layout.place_clearance + snap_tol_z \
+                and abs(dyaw) < snap_tol_yaw:
+            import mujoco
+            jnt = env.model.body_jntadr[mujoco.mj_name2id(env.model, mujoco.mjtObj.mjOBJ_BODY, brick)]
+            qa, va = env.model.jnt_qposadr[jnt], env.model.jnt_dofadr[jnt]
+            env.data.qpos[qa:qa + 3] = tpos
+            env.data.qpos[qa + 3:qa + 7] = qz(yaw_now + dyaw)
+            env.data.qvel[va:va + 6] = 0.0
+            env.forward()
+            clutch.engage(brick, weld_parent)
+        else:
+            welded = False
+            print(f"[place_and_weld] {brick} out of tolerance (xy={err_xy*1000:.1f}mm z={err_z*1000:.1f}mm "
+                  f"yaw={dyaw:.1f}deg) -> NOT welded")
+
+    # 4. open gripper (brick is already clutched, so it can't tip)
+    env.controller.open_gripper()
+    ex._wait_gripper_open()
+
+    # 5. retreat
+    ex._clear_exceptions(brick, below)
+    path = ex.planner.plan_to_pose(ee_approach, ee_quat, dt=0.005, max_iterations=ex.max_plan_iters)
+    if path is not None:
+        env.execute_path(path, ex.planner, step_size=ex.retreat_step_size)
+        env.wait_idle(settle_steps=ex.settle_steps)
+    print(f"[place_and_weld] place {'SUCCESS' if welded else 'FAILED'}"
+          + (f", welded {brick} -> {weld_parent}" if welded and clutch is not None else ""))
+    return welded
+
+
+def make_bridge(domain_path, scene: SimpleLegoScene, clutch=None):
     """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
     Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
+
+    clutch: optional KinematicClutch / NativeClutch. If given, pick releases the brick's weld first and
+            place/stack weld the brick to the table / the brick below before the gripper opens.
     """
     bricks = list(scene.bricks.values())
     bridge = DomainBridge(domain_path, scene.env)
@@ -177,6 +267,7 @@ def make_bridge(domain_path, scene: SimpleLegoScene):
     bridge.fluent("stacked_on")
     ex = scene.executor
     real_name = {pddl_name(n): n for n in scene.bricks}   # translate DomainBridge params back to IR/MuJoCo names
+    TABLE = table_body(scene.env)
 
     def _place_at(env, brick, target, below=None):
         pos, yaw = target
@@ -190,9 +281,18 @@ def make_bridge(domain_path, scene: SimpleLegoScene):
             ee_quat = qmul(qz(d), ee_q)
             # some magic linear algebra so we know where to place brick EVEN AFTER wrist rotation
             place_center = pos - rotz(rel, d) - np.array([0.0, 0.0, GRASP_CONTACT_OFFSET])
-            if ex.place(brick, place_center, ee_quat, target_block_name=below,
-                        place_clearance=scene.layout.place_clearance):
-                return True
+            if clutch is None:
+                if ex.place(brick, place_center, ee_quat, target_block_name=below,
+                            place_clearance=scene.layout.place_clearance):
+                    return True
+            else:
+                # approach/descent failures return False before anything is released -> try next yaw
+                # an out-of-tolerance placement also returns False, but the brick is already let go
+                if place_and_weld(scene, clutch, brick, place_center, ee_quat, target,
+                                  weld_parent=below if below is not None else TABLE, below=below):
+                    return True
+                if env._attached is None:
+                    return False
         return False
 
     @bridge.action("pick")
@@ -201,6 +301,8 @@ def make_bridge(domain_path, scene: SimpleLegoScene):
         b = real_name[b]
         pos, half, quat = env.get_object_position(b), env.get_object_half_size(b), env.get_object_orientation(b)
         cands = scene.grasp_planner.generate_candidates(pos, half, quat)
+        if clutch is not None:
+            clutch.release(b) # UNWELD
         if not ex.pick(b, pos, half, quat, candidates=cands):
             return False, {}
         scene._held = (b, env.get_object_position(b) - scene.ee_pos(), ex._last_grasp_quat.copy())
