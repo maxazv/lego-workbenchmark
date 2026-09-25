@@ -222,6 +222,24 @@ class SimpleLegoScene:
         before = len(self._welds)
         self._welds = [w for w in self._welds if w["child"] != cid]
         return len(self._welds) < before
+    
+    def to_target_structure(self):
+        """teleport bricks to their target pose for visualization."""
+        # same principle as in _apply_welds:
+        #  - get mujoco state
+        #  - get brick indcies to know where pose information stored
+        #  - override info with our target pose
+        #  - do final mj_kinematics so positions/orientations refreshed (no forces calculated, that is job of mj_forward)
+        m, d = self.env.model, self.env.data
+        for name, (pos, target_yaw) in self.target_pose.items():
+            bid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, name)
+            qa = m.jnt_qposadr[m.body_jntadr[bid]]
+            va = m.jnt_dofadr[m.body_jntadr[bid]]
+            d.qpos[qa:qa + 3] = pos
+            d.qpos[qa + 3:qa + 7] = qz(target_yaw)
+            d.qvel[va:va + 6] = 0.0
+        mujoco.mj_kinematics(m, d)
+
 
     @staticmethod
     def _table_top(env):
