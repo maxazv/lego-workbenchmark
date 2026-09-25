@@ -1,7 +1,7 @@
 # Lego Workbenchmark
 
 
-## Setup
+## Setup (TODO)
 
 ### TAMPanda
 
@@ -34,7 +34,7 @@ download (to do)
 git clone https://github.com/ma-haha-hehe/lego_sim.git
 ```
 
-### Fast-Downward
+### Fast-Downward (optional)
 ```bash
 git clone https://github.com/aibasel/downward.git
 cd downward
@@ -58,7 +58,68 @@ pip install pyyaml
 ```
 
 
-TODO convert to emitter stuff
-```bash
-python path/to/domain/emitter.py path/to/yaml_problems/
+---
+
+
+## Project Structure (TODO)
+
+### Overview
+```mermaid
+flowchart LR
+    yaml["task_x.yaml"] --> brick["Brick (IR)"]
+    brick --> scene["SimpleLegoScene"]
+    domain["some_domain.pddl"] --> bridge["Bridge"]
+    scene --> bridge
+    bridge --> plan["plan"]
+```
+
+### YAML Task Files
+> see `src/dataset/ground_truth/tier[1,2]/task_*.yaml` 
+
+Contain target structure and positions of some set of bricks.
+
+### Brick
+> see [src/yaml_loader.py](src/yaml_loader.py)
+
+Internal representation of the yaml task (easier to work with than yaml dicts).
+
+### SimpleLegoScene
+> see [src/scenes.py](src/scenes.py)
+
+Sets up the [TAMPanda](https://github.com/snoato/TAMPanda) environment for a specific yaml task from its Brick representation. This involves adding the resources, putting the objects in their initial positions etc.
+It also sets up the executor which allows us to control the arm in the TAMPanda environment (ie our env actions).
+
+### PDDL Domains
+> see `src/domains/*.pddl` 
+
+Each domain defines a state space graph (set of states and actions, here deterministic state transitions) encoded via STRIPS:
+- It encodes the graph by defining objects of different types
+- Possible relation types between those objects (predicates)
+    - State is the current set of true relations
+- Actions that change the current true relations
+    - Hence actions transition to different states
+
+### Bridges
+> see [src/bridges.py](src/bridges.py)
+
+Bridges 'link' the simulation environment (TAMPanda) to the symbolic state space graph (PDDL domain). It also builds the goal set.
+As we want to plan in PDDL, we need to tell PDDL what our current asbtract symbolic state is from the TAMPanda environment (grounding).
+From that state, PDDL gives us a plan (set of actions), therefore we need to define what these abstract actions actually supposed to do in TAMPanda environment,
+- state grounding: TAMPanda environment state to PDDL symbolic state
+    - what relations hold between the objects
+    - depends on what meaning you gave the predicates
+- action execution: symbolic action to environment action
+    - what is symbolic action supposed to do in real env
+
+```text
+Let s, t be TAMPanda environemtn states and t, t' PDDL symbolic states:
+
+            bridge.action(a)
+        s ───────────────────▶ s'
+        │                      │
+ ground │                      │ ground  (assumed t' = ground(s'))
+        │                      │
+        ▼                      ▼
+        t ───────────────────▶ t'
+                   a
 ```
