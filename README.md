@@ -76,12 +76,12 @@ flowchart LR
 ### YAML Task Files
 > see `src/dataset/ground_truth/tier[1,2]/task_*.yaml` 
 
-Contain target structure and positions of some set of bricks.
+Our input/problem: contains target structure and positions of some set of bricks.
 
 ### Brick
 > see [src/yaml_loader.py](src/yaml_loader.py)
 
-Internal representation of the yaml task (easier to work with than yaml dicts).
+Internal representation of a brick in a specific yaml task (easier to work with than yaml dicts). Hence full yaml task is described by a list containing Brick objects.
 
 ### SimpleLegoScene
 > see [src/scenes.py](src/scenes.py)
@@ -92,8 +92,8 @@ It also sets up the executor which allows us to control the arm in the TAMPanda 
 ### PDDL Domains
 > see `src/domains/*.pddl` 
 
-Each domain defines a state space graph (set of states and actions, here deterministic state transitions) encoded via STRIPS:
-- It encodes the graph by defining objects of different types
+Each domain defines a state space graph: set of states and actions (deterministic state transitions) which  are encoded via STRIPS:
+- Defining objects of different types
 - Possible relation types between those objects (predicates)
     - State is the current set of true relations
 - Actions that change the current true relations
@@ -104,22 +104,32 @@ Each domain defines a state space graph (set of states and actions, here determi
 
 Bridges 'link' the simulation environment (TAMPanda) to the symbolic state space graph (PDDL domain). It also builds the goal set.
 As we want to plan in PDDL, we need to tell PDDL what our current asbtract symbolic state is from the TAMPanda environment (grounding).
-From that state, PDDL gives us a plan (set of actions), therefore we need to define what these abstract actions actually supposed to do in TAMPanda environment,
-- state grounding: TAMPanda environment state to PDDL symbolic state
+From that state, PDDL gives us a plan (set of actions), therefore we need to define what these abstract symbolic actions are actually supposed to do in the TAMPanda environment:
+- state grounding (`bridge.predicate`): TAMPanda environment state to PDDL symbolic state
     - what relations hold between the objects
     - depends on what meaning you gave the predicates
-- action execution: symbolic action to environment action
+    - or use `bridge.fluent` (initial value and then only changed by action effects => no re-sensing)
+- action execution (` bridge.action` ): symbolic action to environment action
     - what is symbolic action supposed to do in real env
 
-```text
-Let s, t be TAMPanda environemtn states and t, t' PDDL symbolic states:
 
-            bridge.action(a)
-        s ───────────────────▶ s'
-        │                      │
- ground │                      │ ground  (assumed t' = ground(s'))
-        │                      │
-        ▼                      ▼
-        t ───────────────────▶ t'
-                   a
+
+
+Let $s, t$ be TAMPanda environemtn states and $t, t'$ PDDL symbolic states. Let *bridge* translate the symbolic action to a TAMPanda action and *ground* translate a TAMPanda state to a PDDL state:
+```text
+
+        a ────────── bridge ─────────▶ α
+
+
+                       α
+        s ───────────────────────────▶ s'
+        │                              │
+ ground │                              │ ground? (assumed)
+        │                              │
+        ▼                              ▼
+        t ───────────────────────────▶ t'
+                       a
 ```
+We assume that after we execute action in our TAMPanda environment that the new state we reach still aligns with the symbolic state but often that is not the case.
+Eg when stacking (action) a brick on a tower, the brick might slip while the symbolic state assumes the brick was placed correctly.
+This is often solved with regrounding the state and then replanning after each action execution.
