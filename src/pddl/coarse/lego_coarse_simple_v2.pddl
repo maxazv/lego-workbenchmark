@@ -37,36 +37,6 @@
     )
   )
 
-  ; (:action unstack
-  ;   :parameters (?b - brick ?on - brick)
-  ;   :precondition (and 
-  ;     (stacked_on ?b ?on) 
-  ;     (hand-empty) 
-  ;     (top-clear ?b)
-  ;   )
-  ;   :effect (and 
-  ;     (not (stacked_on ?b ?on)) 
-  ;     (top-clear ?on)
-  ;     (not (hand-empty)) 
-  ;     (holding ?b))
-  ;   )
-
-  ; NOTE: place irrelevant now
-  ; ; Place the held item at a location that is geometrically free to receive it.
-  ; (:action place
-  ;   :parameters (?b - brick ?to - location)
-  ;   :precondition (and
-  ;     (holding ?b)
-  ;     (clear ?to)
-  ;   )
-  ;   :effect (and
-  ;     (not (holding ?b))
-  ;     (at ?b ?to)
-  ;     (hand-empty)
-  ;     (not (clear ?to))
-  ;   )
-  ; )
-
   ; should only be used for root bricks
   (:action place
     :parameters (?b - brick)

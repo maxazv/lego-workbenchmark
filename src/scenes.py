@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 import numpy as np
 
+import mujoco
 from tampanda import ArmSceneBuilder, RRTStar, GraspPlanner, PickPlaceExecutor
 from tampanda.scenes import TABLE_SYMBOLIC_TEMPLATE
 from tampanda.tamp import DomainBridge
@@ -57,6 +58,11 @@ def rotz(v, deg):
 def wrap(deg):
     return (deg + 180) % 360 - 180
 
+def qconj(q):
+    """Used by weld() to express a body's pose relative to another body's frame (see weld())"""
+    return np.array([q[0], -q[1], -q[2], -q[3]])
+
+
 
 class SimpleLegoScene:
     """
@@ -65,7 +71,11 @@ class SimpleLegoScene:
         - Executor for motion planning (RRTStar, GraspPlanner, PickPlaceExecutor)
             - for PickPlaceExecutor see (https://snoato.github.io/TAMPanda/tutorial.html).
     """
-    def __init__(self, bricks: list[Brick], template_dir="block_templates", layout=Layout(), rate=200.0):
+    def __init__(self, bricks: list[Brick], template_dir="block_templates", layout=Layout(), rate=200.0, seed=None):
+        # variability due to RRTStar
+        if seed is not None:
+            np.random.seed(seed)
+
         # bricks we get from yaml_loader.load_task
         self.bricks = {b.name: b for b in bricks}
         self.layout = layout
@@ -117,6 +127,101 @@ class SimpleLegoScene:
         self.grasp_planner = GraspPlanner(table_z=self.table_z, table_clearance=layout.grasp_table_clearance)
         self.executor = PickPlaceExecutor(self.env, self.planner, self.grasp_planner, use_attachment=True)
         self._held = None  # tracks what brick and how we are holding: (brick_name, grip_offset_vector, grasp_quat)
+
+        self._welds = []  # list of dicts: {child, parent, rel_pos, rel_quat} (see weld() below)
+        self._install_weld_hook()
+
+    def _install_weld_hook(self):
+        """Rigid welding in TAMPanda. TAMPanda already does this in franka_env.py with attach_object_to_ee / _apply_attachment:
+            - capture the held object's pose relative to EE once at grasp-time (offset)
+            - every step thereafter teleport the object's qpos to the EE's current pose composed with fixed relative offset
+                - mujoco environemnt step is wrapped with custom step where teleported
+
+        We generalize to two arbitrary bodies in env => we wrap TAMPanda env step.
+        """
+        orig_step = self.env.step
+        def step_with_welds():
+            self._apply_welds()   # must run before mj_step
+            orig_step()           # the real step(): attachment check, then mj_step, then its own bookkeeping
+        self.env.step = step_with_welds
+
+        # fix: we have to reset the welds, otherwise after reset bricks are teleported back
+        orig_reset = self.env.reset
+        def reset_with_welds():
+            self._welds = []
+            orig_reset()
+        self.env.reset = reset_with_welds
+ 
+    def _apply_welds(self):
+        m, d = self.env.model, self.env.data
+        mujoco.mj_kinematics(m, d)
+        by_child = {w["child"]: w for w in self._welds}  # child to weld-relation mapping
+        fresh = {}   # body id -> (pos, quat) written by this pass so far
+
+        # recall ex1 forward kinematics: we have to first transform parent then apply relative transform to children
+        # => bottom-up approach whcih we do recursively
+        def resolve(bid):
+            if bid in fresh:
+                return fresh[bid]
+            w = by_child.get(bid)
+            if w is None:  # not welded: its current pose is the truth
+                return d.xpos[bid].copy(), d.xquat[bid].copy()
+            p_pos, p_quat = resolve(w["parent"])  # parent first (recall ex1)
+            rotated = np.zeros(3)
+            mujoco.mju_rotVecQuat(rotated, w["rel_pos"], p_quat)
+            # our position in world coords (we apply the transform now)
+            pos, quat = p_pos + rotated, qmul(p_quat, w["rel_quat"])
+            # get indices of where our pos/orientation saved in mujoco
+            j = m.body_jntadr[bid]
+            qa, va = m.jnt_qposadr[j], m.jnt_dofadr[j]
+            # set the position in mujoco
+            d.qpos[qa:qa + 3] = pos
+            d.qpos[qa + 3:qa + 7] = quat
+            d.qvel[va:va + 6] = 0.0
+            # track that we've calculated this brick
+            fresh[bid] = (pos, quat)
+            return fresh[bid]
+ 
+        for w in self._welds:
+            resolve(w["child"])
+ 
+    def weld(self, child, parent):
+        """Rigidly lock `child`'s pose to `parent`'s, from whatever their CURRENT relative pose is."""
+        m, d = self.env.model, self.env.data
+        cid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, child)
+        pid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, parent)
+
+        # some safety checks
+        assert cid >= 0, f"unknown body '{child}'"
+        assert pid >= 0, f"unknown body '{parent}'"
+        assert m.body_jntadr[cid] >= 0, f"'{child}' has no free joint (nothing to weld)"
+        if cid == pid:
+            raise ValueError(f"cannot weld '{child}' to itself")
+        # walk up from the new parent: if we reach the child, this weld would close loop (which is meaningless)
+        by_child = {w["child"]: w["parent"] for w in self._welds if w["child"] != cid}
+        b = pid
+        while b in by_child:
+            b = by_child[b]
+            if b == cid:
+                raise ValueError(f"welding '{child}' to '{parent}' would create a weld cycle")
+
+        # we get the relative pose of child wrt parent: ie what operation do we have to apply to parent to get child pose (recall ex1)
+        # aka in world coords where parent has zero pos and orientation: what is child pose
+        Rp = d.xmat[pid].reshape(3, 3)
+        rel_pos = Rp.T @ (d.xpos[cid] - d.xpos[pid])
+        rel_quat = qmul(qconj(d.xquat[pid]), d.xquat[cid])
+        # save it in our welds-relation list
+        self._welds = [w for w in self._welds if w["child"] != cid]   # replace any prior weld on this child
+        self._welds.append({"child": cid, "parent": pid, "rel_pos": rel_pos, "rel_quat": rel_quat})
+ 
+    def unweld(self, child, parent=None):
+        """Remove any weld on `child`"""
+        # NOTE: parent unnecessary as we only every weld child to single parent (for tier[1,2] at least)
+        m = self.env.model
+        cid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, child)
+        before = len(self._welds)
+        self._welds = [w for w in self._welds if w["child"] != cid]
+        return len(self._welds) < before
 
     @staticmethod
     def _table_top(env):
