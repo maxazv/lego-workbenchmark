@@ -88,12 +88,13 @@ Internal representation of a brick in a specific yaml task (easier to work with 
 > see [src/scenes.py](src/scenes.py)
 
 Sets up the [TAMPanda](https://github.com/snoato/TAMPanda) environment for a specific yaml task from its Brick representation. This involves adding the resources, putting the objects in their initial positions etc.
-It also sets up the executor which allows us to control the arm in the TAMPanda environment (ie our env actions).
+Additionally, it sets up the executor which allows us to control the arm in the TAMPanda environment (ie our env actions).
+Also contains snap + welding logic (so TAMPanda blocks behave somewhat like Lego bricks).
 
 ### PDDL Domains
 > see `src/domains/*.pddl` 
 
-Each domain defines a state space graph: set of states and actions (deterministic state transitions) which  are encoded via STRIPS:
+Each domain defines a state space graph: set of states and actions (deterministic state transitions) which are encoded via relational state abstraction:
 - Defining objects of different types
 - Possible relation types between those objects (predicates)
     - State is the current set of true relations
@@ -134,4 +135,4 @@ Let $s, s'$ be TAMPanda environemtn states and $t, t'$ PDDL symbolic states. Let
 ```
 We assume that after we execute an action $\alpha$ in our TAMPanda environment state $s$ that the new state we reach $s'$ still aligns with the symbolic state $t'$, but often that is not the case.
 Eg when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
-This is often solved with regrounding the state and replanning from there after each action execution.
+This is often solved with regrounding the state and replanning from there after each action execution. Or by defining a better environment action for the symbolic action.
