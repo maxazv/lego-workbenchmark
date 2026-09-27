@@ -1,6 +1,6 @@
 """Helpers for the PDDL-vs-ABD baseline comparison.  Import from src/ for example the notebooks
 
-We the team is using: 
+We are using: 
 ABD from lego_sim (executor_planner.plan_assembly) whichi is using  pure Python.
 PDDL which is our DomainBridge pipeline (scenes.SimpleLegoScene + bridges.*Bridge + Fast Downward as planner).
 """
