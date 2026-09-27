@@ -31,6 +31,9 @@ ln -s ../dataset .
 ### Lego Simulator (optional)
 ```bash
 git clone https://github.com/ma-haha-hehe/lego_sim.git
+
+cd src
+ln -s ../../lego_sim/src/mj_bridge/mj_bridge mj_bridge   # For ABD baseline planner
 ```
 
 ### Fast-Downward (optional)
