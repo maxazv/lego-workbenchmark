@@ -29,10 +29,11 @@ ln -s ../dataset .
 ```
 
 ### Lego Simulator (optional)
+Only the pure-Python planner `executor_planner.py` is used (no ROS, no MuJoCo needed)
 ```bash
 git clone https://github.com/ma-haha-hehe/lego_sim.git
 
-cd src
+cd lego-workbenchmark/src
 ln -s ../../lego_sim/src/mj_bridge/mj_bridge mj_bridge   # For ABD baseline planner
 ```
 
