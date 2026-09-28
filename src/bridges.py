@@ -15,6 +15,7 @@ from scenes import (
     qz, qmul, yaw_of, rotz, wrap,
     SimpleLegoScene,
 )
+from collections import Counter
 
 
 
@@ -232,15 +233,41 @@ class LegoCoarseSimpleV2SLSWeldBridge:
         bricks = list(scene.bricks.values())
         bridge = DomainBridge(domain_path, scene.env)
 
+        def lvl(l): return f"l{l}"
+        def num(n): return f"n{n}"
+
+
+
         # we use fluents because these are all predicates which are only influenced by action effects
         # if we want to use TAMP planning we would need to define these as predicates (not that difficult as main work already done in SimpleLegoScene)
-        roots = {r for r in scene.bricks if r not in support_tree(bricks)[0]}
-        bridge.fluent("is-root", initial=[pddl_name(r) for r in roots])
+        supported = support_tree(bricks)[0]
+        roots = {r for r in scene.bricks if r not in supported}
         bridge.fluent("at-target")
         bridge.fluent("top-clear", initial=[pddl_name(b.name) for b in bricks])
         bridge.fluent("stacked_on")
         bridge.fluent("holding")
         bridge.fluent("hand-empty", initial=True)
+        bridge.fluent("loose", initial=[pddl_name(b.name) for b in bricks])
+        parent, _, multi = support_tree(bricks)
+        roots = {r for r in scene.bricks if r not in parent}
+        _nm = lambda s: s if isinstance(s, str) else s.name   # multi may hold names or Bricks
+
+        support_facts = {(pddl_name(n), pddl_name(p.name)) for n, p in parent.items()}
+        support_facts |= {(pddl_name(n), pddl_name(_nm(s))) for n, ss in multi.items() for s in ss}
+
+        bridge.fluent("is-root", initial=[pddl_name(r) for r in roots])
+        bridge.fluent("supports", initial=sorted(support_facts))
+    
+
+        layer_count = Counter(b.layer for b in bricks) #bricks per layer
+        layers = sorted(layer_count)
+        max_count = max(layer_count.values())
+        bridge.fluent("on-level", initial=[(pddl_name(b.name), lvl(b.layer)) for b in bricks])
+        bridge.fluent("next-level", initial=[(lvl(a), lvl(b)) for a, b in zip(layers, layers[1:])])
+        bridge.fluent("succ", initial=[(num(n), num(n + 1)) for n in range(max_count)]) # Grüße an Prof. Giesl
+        bridge.fluent("remaining", initial=[(lvl(l), num(c)) for l, c in layer_count.items()])
+        bridge.fluent("level-open", initial=[lvl(layers[0])])
+
         ex = scene.executor
         real_name = {pddl_name(n): n for n in scene.bricks}   # translate DomainBridge params back to IR/MuJoCo names
 
@@ -345,16 +372,17 @@ class LegoCoarseSimpleV2SLSWeldBridge:
             return True, {("holding", pddl_name(b)): True, ("hand-empty",): False}
 
         @bridge.action("place")
-        def exec_place(env, fluents, b):
+        def exec_place(env, fluents, b, l, n, m):
             b = real_name[b]
             target = scene.target_pose[b]
             if not _place_at(env, b, target):
                 return False, {}
             scene._held = None
-            return True, {("holding", pddl_name(b)): False, ("at-target", pddl_name(b)): True, ("hand-empty",): True}
+            return True, {("holding", pddl_name(b)): False, ("at-target", pddl_name(b)): True, ("hand-empty",): True, ("loose", pddl_name(b)): False,
+                          ("remaining", l, n): False, ("remaining", l, m): True} # Decrement number of remaining bricks at level l
 
         @bridge.action("stack")
-        def exec_stack(env, fluents, b, on):
+        def exec_stack(env, fluents, b, on, l, n, m):
             b, on = real_name[b], real_name[on]
             # NOTE: stack assumes that brick 'on' is already at its target pose => we can stack our brick to target pose (which is above)
             # works for this domain as this is assumption of pddl domain as well
@@ -364,19 +392,24 @@ class LegoCoarseSimpleV2SLSWeldBridge:
             return True, {
                 ("holding", pddl_name(b)): False, ("top-clear", pddl_name(on)): False,
                 ("stacked_on", pddl_name(b), pddl_name(on)): True, ("at-target", pddl_name(b)): True,
-                ("hand-empty",): True,
+                ("hand-empty",): True, ("loose", pddl_name(b)): False,
+                ("remaining", l, n): False, ("remaining", l, m): True # Decrement number of remaining bricks at level l
             }
+
+        @bridge.action("open-next-level")
+        def exec_open_next_level(env, fluents, l, l2): # This one is just symbolic and does not affect the robot
+            return True, {("level-open", l2): True}
 
         return bridge
 
     def build_objects_and_goal(bricks: list[Brick]):
-        """Set up all objects, predicates and goal conditions for bridge (NOTE that this is for lego_coarse_simple.pddl domain)"""
-        parent, children, multi = support_tree(bricks)
-        for n, names in multi.items():
-            print(f"NOTE: {n} rests on {names}; keeping only {parent[n].name} (see bridge limitation)")
-        roots = [b for b in bricks if b.name not in parent]
-
-        objects = {"brick": [pddl_name(b.name) for b in bricks]}
+        """Set up all objects, predicates and goal conditions for bridge"""
+        layer_count = Counter(b.layer for b in bricks)
+        max_count = max(layer_count.values())
+        objects = {
+            "brick": [pddl_name(b.name) for b in bricks],
+            "level": [f"l{l}" for l in sorted(layer_count)],
+            "num":   [f"n{n}" for n in range(1, max_count + 1)],   # n0 is a domain constant
+        }
         goals = [("at-target", pddl_name(b.name)) for b in bricks]
-        goals += [("stacked_on", pddl_name(b.name), pddl_name(parent[b.name].name)) for b in bricks if b.name in parent]
         return objects, goals
