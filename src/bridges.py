@@ -614,6 +614,7 @@ def supports_slot_facts(bricks: list[Brick]) -> list[list[tuple[str, str]]]:
 
 class LegoBeyondTier2SlotsSLSWeldBridge:
 
+    @staticmethod
     def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         bricks = list(scene.bricks.values())
         real = [pddl_name(b.name) for b in bricks]
@@ -674,6 +675,7 @@ class LegoBeyondTier2SlotsSLSWeldBridge:
     
         return bridge
 
+    @staticmethod
     def build_objects_and_goal(bricks: list[Brick]):
         objects = {"brick": [pddl_name(b.name) for b in bricks] + FILLERS}
         goals = [("at-target", pddl_name(b.name)) for b in bricks]
