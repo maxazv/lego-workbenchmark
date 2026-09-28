@@ -26,12 +26,22 @@ class Layout:
     # ie the initial positions are relative to some arbitray pick coordinate zero-point.
     # same for assembly positions which are relative to their own coordinates.
 
+    # NOTE: ideally asm_center and pick_slots would depend on problem:
+    # ie by figuring out pick/place reach of robot arm and wihtin that area placing the asm-area and pick spots
+
     # thus we just define some zero-points for pick and assembly coordinates in our TAMPanda env coordinate system.
     # chosen so that arm can actually reach the positions.
     asm_center: tuple = (0.45, 0.45)
-    pick_y: float = 0.27
-    pick_x0: float = 0.25
-    pick_spacing: float = 0.10  # how far blocks are apart in initial position (see analysis this is pretty accurate)
+    # for tier 3 old method of initial pos failed because too far away => now via predetermined slots (slots unchanged for T1/2)
+    # NOTE: only need 12 as this is max brick count in dataset (see analysis.ipynb)
+    pick_slots: tuple = (
+        (0.25, 0.27), (0.35, 0.27), (0.45, 0.27), (0.55, 0.27), (0.15, 0.27), (0.05, 0.27),
+        (0.22, 0.45), (0.12, 0.45), (0.02, 0.45), (-0.08, 0.45), (-0.18, 0.45), (-0.28, 0.45)
+    )
+
+    # pick_y: float = 0.27
+    # pick_x0: float = 0.25
+    # pick_spacing: float = 0.10  # how far blocks are apart in initial position (see analysis this is pretty accurate)
     table_pos: tuple = (0.0, 0.4, 0.0)
     table_quat: tuple = (0.0, 0.0, 0.0, 1.0)
     grasp_table_clearance: float = 0.004   # GraspPlanner otherwise rejects anything shorter than about 3.5cm (which our bricks are)
@@ -100,8 +110,10 @@ class SimpleLegoScene:
         # (symbolic planner doesnt care anyway)
         self.pick_pose = {}
         for i, br in enumerate(bricks):
-            pos = np.array([layout.pick_x0 + i * layout.pick_spacing, layout.pick_y,
-                            self.table_z + BRICK_HALF_HEIGHT])
+            # pos = np.array([layout.pick_x0 + i * layout.pick_spacing, layout.pick_y,
+            #                 self.table_z + BRICK_HALF_HEIGHT])
+            sx, sy = layout.pick_slots[i]
+            pos = np.array([sx, sy, self.table_z + BRICK_HALF_HEIGHT])
             yaw = br.initial_yaw or 0
             self.pick_pose[br.name] = (pos, yaw)
             b.add_object(br.type, name=br.name, pos=pos.tolist(), quat=qz(yaw).tolist(),

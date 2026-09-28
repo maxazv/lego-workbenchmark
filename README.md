@@ -141,14 +141,6 @@ We assume that after we execute an action $\alpha$ in our TAMPanda environment s
 Eg when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
 This is often solved with regrounding the state and replanning from there after each action execution. Or by defining a better environment action for the symbolic action.
 
-<<<<<<< HEAD
-
-## Experiments
-
-## Results
-
-## Conclusion and Outlook
-=======
 ### Using TamPanda for a LEGO Simulation Environment
 Using TamPanda allowed for the reuse of multiple motion planning tools:
 - `RRTStar` for the arm's motion planning
@@ -173,4 +165,3 @@ Maybe some words on limitations
 - 
 ### Conclusion 
 
->>>>>>> 579e92c1a3b704336018332256a747cea23c5620

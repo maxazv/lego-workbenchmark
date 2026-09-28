@@ -36,12 +36,12 @@ def execute_plan(bridge, plan):
 class LegoCoarseSimpleSLSBridge:
     # domain_path = ""
 
-    def make_bridge(domain_path, scene: SimpleLegoScene):
+    def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
         """
         bricks = list(scene.bricks.values())
-        bridge = DomainBridge(domain_path, scene.env)
+        bridge = DomainBridge(domain_path, scene.env, strict_preconditions=strict_preconditions)
 
         # we use fluents because these are all predicates which are only influenced by action effects
         # if we want to use TAMP planning we would need to define these as predicates (not that difficult as main work already done in SimpleLegoScene)
@@ -131,12 +131,12 @@ class LegoCoarseSimpleSLSBridge:
 class LegoCoarseSimpleV2SLSBridge:
     # domain_path = ""
 
-    def make_bridge(domain_path, scene: SimpleLegoScene):
+    def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
         """
         bricks = list(scene.bricks.values())
-        bridge = DomainBridge(domain_path, scene.env)
+        bridge = DomainBridge(domain_path, scene.env, strict_preconditions=strict_preconditions)
 
         # we use fluents because these are all predicates which are only influenced by action effects
         # if we want to use TAMP planning we would need to define these as predicates (not that difficult as main work already done in SimpleLegoScene)
@@ -225,12 +225,12 @@ class LegoCoarseSimpleV2SLSBridge:
 class LegoCoarseSimpleV2SLSWeldBridge:
     # domain_path = ""
 
-    def make_bridge(domain_path, scene: SimpleLegoScene):
+    def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
         """
         bricks = list(scene.bricks.values())
-        bridge = DomainBridge(domain_path, scene.env)
+        bridge = DomainBridge(domain_path, scene.env, strict_preconditions=strict_preconditions)
 
         # we use fluents because these are all predicates which are only influenced by action effects
         # if we want to use TAMP planning we would need to define these as predicates (not that difficult as main work already done in SimpleLegoScene)
@@ -479,12 +479,12 @@ class LegoBeyondTier2SLSWeldBridge:
     # domain_path = ""
     # TODO: doesnt work yet, but too lazy to fix because bridge below is better idea
 
-    def make_bridge(domain_path, scene: SimpleLegoScene):
+    def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
         """
         bricks = list(scene.bricks.values())
-        bridge = DomainBridge(domain_path, scene.env)
+        bridge = DomainBridge(domain_path, scene.env, strict_preconditions=strict_preconditions)
 
         tree = supporters(bricks)
         # we use fluents because these are all predicates which are only influenced by action effects
