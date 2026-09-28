@@ -148,15 +148,3 @@ def supporters(bricks):
                 sup.append((below, shared))
         out[b.name] = sorted(sup, key=lambda t: -t[1])
     return out
-
-
-# distance matrix in #cells: ie calculate distance to each bricks cell take min cell into distance matrix
-
-# TODO: obstructors ie horizontal obstructions
-# - obstructors for both initial and target cells
-# - recall TAMP regrounds and replans after each action execution
-def obstructors(bricks, num_cells: int):
-    # brick a obstructs brick b if distance from a to b is <= num_cells
-    for b in bricks:
-        # TODO
-        raise NotImplementedError

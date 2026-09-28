@@ -126,13 +126,20 @@ Let $s, s'$ be TAMPanda environemtn states and $t, t'$ PDDL symbolic states. Let
 
                        α
         s ───────────────────────────▶ s'
-        │                              │
- ground │                              │ ground? (assumed)
-        │                              │
-        ▼                              ▼
+        │                               │
+ ground │                               │ ground? (assumed)
+        │                               │
+        ▼                               ▼
         t ───────────────────────────▶ t'
                        a
 ```
 We assume that after we execute an action $\alpha$ in our TAMPanda environment state $s$ that the new state we reach $s'$ still aligns with the symbolic state $t'$, but often that is not the case.
 Eg when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
 This is often solved with regrounding the state and replanning from there after each action execution. Or by defining a better environment action for the symbolic action.
+
+
+## Experiments
+
+## Results
+
+## Conclusion and Outlook
