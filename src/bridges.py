@@ -252,6 +252,8 @@ class LegoCoarseSimpleV2SLSWeldBridge:
         roots = {r for r in scene.bricks if r not in parent}
         _nm = lambda s: s if isinstance(s, str) else s.name   # multi may hold names or Bricks
 
+        bridge.fluent("zero", initial=[num(0)])
+
         support_facts = {(pddl_name(n), pddl_name(p.name)) for n, p in parent.items()}
         support_facts |= {(pddl_name(n), pddl_name(_nm(s))) for n, ss in multi.items() for s in ss}
 
@@ -397,7 +399,7 @@ class LegoCoarseSimpleV2SLSWeldBridge:
             }
 
         @bridge.action("open-next-level")
-        def exec_open_next_level(env, fluents, l, l2): # This one is just symbolic and does not affect the robot
+        def exec_open_next_level(env, fluents, l, l2, z): # This one is just symbolic and does not affect the robot
             return True, {("level-open", l2): True}
 
         return bridge
@@ -409,7 +411,7 @@ class LegoCoarseSimpleV2SLSWeldBridge:
         objects = {
             "brick": [pddl_name(b.name) for b in bricks],
             "level": [f"l{l}" for l in sorted(layer_count)],
-            "num":   [f"n{n}" for n in range(1, max_count + 1)],   # n0 is a domain constant
+            "num": [f"n{n}" for n in range(0, max_count + 1)],
         }
         goals = [("at-target", pddl_name(b.name)) for b in bricks]
         return objects, goals

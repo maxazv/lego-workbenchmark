@@ -1,5 +1,5 @@
 (define (domain lego-coarse-v2)
-  (:requirements :typing :negative-preconditions)
+  (:requirements :typing)
 
   (:types
     ; color
@@ -10,8 +10,6 @@
     level
     num
   )
-
-  (:constants n0 - num)
 
   (:predicates
     ; (is_color ?b - brick ?c - color)
@@ -31,6 +29,7 @@
     (on-level ?b - brick ?l - level)
     (next-level ?l1 - level ?l2 - level) ; l0 -> l1 -> l2 ... to make sure we ascend properly through the levels
     (succ ?n - num ?m - num) ; n0 -> n1 -> n2 ... to make sure we count properly the number of placed bricks in a level
+    (zero ?n - num)
 
     (level-open ?l - level) ; We try to only open a level (height) after closing the previous one, in an attempt to enforce precedence. We'll see...
     (remaining ?l - level ?n - num) ; Count the remaining bricks left to place on a level until we can "unlock" the next one
@@ -126,11 +125,13 @@
   )
 
   (:action open-next-level
-    :parameters (?l - level ?l2 - level)
+    :parameters (?l - level ?l2 - level ?z - num)
     :precondition (and 
       (level-open ?l) 
-      (remaining ?l n0) 
-      (next-level ?l ?l2))
+      (remaining ?l ?z) 
+      (next-level ?l ?l2)
+      (zero ?z)
+    )
     :effect (and 
       (level-open ?l2)
     )
