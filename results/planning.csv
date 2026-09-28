@@ -1,0 +1,41 @@
+tier,task,n_bricks,abd_steps,abd_time_ms,abd_order,pddl_solved,pddl_pairs,pddl_time_s,pddl_order,order_valid,order_equal_abd
+1,task_001,2,2,0.063,4x2_brick_1 4x2_brick_2,True,2,0.49,4x2_brick_1 4x2_brick_2,True,True
+1,task_006,2,2,0.112,4x2_brick_1 4x2_brick_2,True,2,0.15,4x2_brick_1 4x2_brick_2,True,True
+1,task_011,2,2,0.055,2x2_brick_1 2x2_brick_2,True,2,0.134,2x2_brick_1 2x2_brick_2,True,True
+1,task_016,2,2,0.058,2x2_brick_1 2x2_brick_2,True,2,0.132,2x2_brick_1 2x2_brick_2,True,True
+1,task_021,2,2,0.121,2x2_brick_1 2x2_brick_2,True,2,0.128,2x2_brick_1 2x2_brick_2,True,True
+1,task_026,2,2,1.58,2x2_brick_1 2x2_brick_2,True,2,0.221,2x2_brick_1 2x2_brick_2,True,True
+1,task_031,2,2,0.087,2x2_brick_1 2x2_brick_2,True,2,0.135,2x2_brick_1 2x2_brick_2,True,True
+1,task_036,2,2,0.13,4x2_brick_1 4x2_brick_2,True,2,0.133,4x2_brick_1 4x2_brick_2,True,True
+1,task_041,2,2,0.135,4x2_brick_1 4x2_brick_2,True,2,0.171,4x2_brick_1 4x2_brick_2,True,True
+1,task_046,2,2,0.067,2x2_brick_1 2x2_brick_2,True,2,0.127,2x2_brick_1 2x2_brick_2,True,True
+1,task_051,2,2,0.131,4x2_brick_1 4x2_brick_2,True,2,0.125,4x2_brick_1 4x2_brick_2,True,True
+1,task_056,2,2,0.132,2x2_brick_1 2x2_brick_2,True,2,0.179,2x2_brick_1 2x2_brick_2,True,True
+1,task_061,2,2,0.115,2x2_brick_1 2x2_brick_2,True,2,0.137,2x2_brick_1 2x2_brick_2,True,True
+1,task_066,2,2,0.127,2x2_brick_1 2x2_brick_2,True,2,0.127,2x2_brick_1 2x2_brick_2,True,True
+1,task_071,2,2,0.114,4x2_brick_1 4x2_brick_2,True,2,0.198,4x2_brick_1 4x2_brick_2,True,True
+1,task_076,2,2,0.118,4x2_brick_1 4x2_brick_2,True,2,0.277,4x2_brick_1 4x2_brick_2,True,True
+1,task_081,2,2,0.08,4x2_brick_1 4x2_brick_2,True,2,0.141,4x2_brick_1 4x2_brick_2,True,True
+1,task_086,2,2,0.14,4x2_brick_1 4x2_brick_2,True,2,0.142,4x2_brick_1 4x2_brick_2,True,True
+1,task_091,2,2,0.13,4x2_brick_1 4x2_brick_2,True,2,0.13,4x2_brick_1 4x2_brick_2,True,True
+1,task_096,2,2,0.115,2x2_brick_1 2x2_brick_2,True,2,0.132,2x2_brick_1 2x2_brick_2,True,True
+2,task_001,3,3,0.154,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.124,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_006,3,3,0.163,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.129,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_011,2,2,0.067,4x2_brick_1 2x2_brick_2,True,2,0.132,4x2_brick_1 2x2_brick_2,True,True
+2,task_016,3,3,0.164,4x2_brick_1 2x2_brick_2 4x2_brick_3,True,3,0.186,4x2_brick_1 2x2_brick_2 4x2_brick_3,True,True
+2,task_021,3,3,0.042,4x2_brick_1 2x2_brick_2 4x2_brick_3,True,3,0.14,4x2_brick_1 2x2_brick_2 4x2_brick_3,True,True
+2,task_026,3,3,0.167,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.154,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_031,3,3,0.158,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.13,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_036,4,4,0.195,4x2_brick_1 2x2_brick_2 2x2_brick_3 2x2_brick_4,True,4,0.128,4x2_brick_1 2x2_brick_2 2x2_brick_3 2x2_brick_4,True,True
+2,task_041,3,3,0.173,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.423,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_046,4,4,0.076,4x2_brick_1 2x2_brick_2 2x2_brick_3 2x2_brick_4,True,4,0.152,4x2_brick_1 2x2_brick_2 2x2_brick_3 2x2_brick_4,True,True
+2,task_051,3,3,0.149,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.146,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_056,2,2,0.127,4x2_brick_1 2x2_brick_2,True,2,0.13,4x2_brick_1 2x2_brick_2,True,True
+2,task_061,3,3,0.157,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.145,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_066,3,3,0.043,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.192,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_071,3,3,0.141,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.13,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_076,4,4,0.051,4x2_brick_1 2x2_brick_2 4x2_brick_3 2x2_brick_4,True,4,0.14,4x2_brick_1 2x2_brick_2 4x2_brick_3 2x2_brick_4,True,True
+2,task_081,2,2,0.082,4x2_brick_1 2x2_brick_2,True,2,0.181,4x2_brick_1 2x2_brick_2,True,True
+2,task_086,2,2,0.118,4x2_brick_1 2x2_brick_2,True,2,0.128,4x2_brick_1 2x2_brick_2,True,True
+2,task_091,3,3,0.042,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.137,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True
+2,task_096,3,3,0.153,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,3,0.171,4x2_brick_1 2x2_brick_2 2x2_brick_3,True,True

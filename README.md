@@ -29,8 +29,12 @@ ln -s ../dataset .
 ```
 
 ### Lego Simulator (optional)
+Only the pure-Python planner `executor_planner.py` is used (no ROS, no MuJoCo needed)
 ```bash
 git clone https://github.com/ma-haha-hehe/lego_sim.git
+
+cd lego-workbenchmark/src
+ln -s ../../lego_sim/src/mj_bridge/mj_bridge mj_bridge   # For ABD baseline planner
 ```
 
 ### Fast-Downward (optional)
@@ -137,9 +141,36 @@ We assume that after we execute an action $\alpha$ in our TAMPanda environment s
 Eg when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
 This is often solved with regrounding the state and replanning from there after each action execution. Or by defining a better environment action for the symbolic action.
 
+<<<<<<< HEAD
 
 ## Experiments
 
 ## Results
 
 ## Conclusion and Outlook
+=======
+### Using TamPanda for a LEGO Simulation Environment
+Using TamPanda allowed for the reuse of multiple motion planning tools:
+- `RRTStar` for the arm's motion planning
+- `GraspPlanner` to generate candidate configurations for the gripper
+- `PickPlaceExecutor` to query the `GraspPlanner` for a pose, then let `RRTStar` find  a plan to that pose and finally execute
+
+With this motion planning framework at hand, it remains to initialize and adjust the environment such that it poses a plausible abstraction for a LEGO assembly. This includes spawning blocks at appropriate dimensions. Since the benchmark's initial ground truths do not include any obstructions, spawning the blocks, aligned and in a different, designated area again maintains equivalence to the original task. Similarly, we define our own assembly area.
+
+Notably, our blocks do not have any studs, nor does our environment include a ground plate for the designated assembly area. Although such simplifications may seem detrimental, the environment still suffices the needs of engineering a PDDL Domain fit to the WorkBenchMark tasks: Since a solution is described with precise coordinates, there is no need to check stud-level alignment for blocks. Any valid goal only includes stackings that fulfil the alignments of studs, therefore we can make the abstraction from bricks that are stacked to blocks that are welded together. Since this is not default behaviour, [LegoCoarseSimpleV2SLSWeldBridge](src/bridges.py) includes a welding step that snaps a block to a "child", i.e. a block underneath or the table (corresponding to a ground plate). This must happen during the place action when the block is within close vicinity of its child, i.e., right when the gripper releases. If there were a need to pick blocks that are already stacked, the pick-action would require the removal of a weld. Realistically, there is no need since the tasks requires no such plans.
+
+
+### Experimentation/Workflow
+TODO: Brief description of the "incremental" adjustments that were made to the domain, bridge etc. until we got all tasks working
+
+### Benchmark & Results
+In our [evaluation](src/eval_baseline.ipynb), we collect statistics on success rate and planning time. Notably, the ABD baseline, as stated in the paper, fails even at some level 1&2 tasks. This clearly showcases indicates our comparison underlies a caveat: Our work does not include perception but works with the simulation's ground truth, a simplification that saves both overhead in time as well as errors. Therefore, we run an ABD planner's recipe through our executors and observe equivalent outcomes, but found at much faster planning speed, taking roughly a hundredth of time on average. Overall, our pipeline yields a 100% success rate for planning and execution across tier 1 and 2 of the WorkBenchMark dataset.
+
+### Limitations
+Maybe some words on limitations
+- e.g. stacking on multiple bricks as happens in Tier 3&4 (unless we find a fix)
+- also that our pipeline does no replanning, since we kinda don't need it atm
+- 
+### Conclusion 
+
+>>>>>>> 579e92c1a3b704336018332256a747cea23c5620
