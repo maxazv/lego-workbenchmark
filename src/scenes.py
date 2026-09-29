@@ -142,6 +142,46 @@ class SimpleLegoScene:
 
         self._welds = []  # list of dicts: {child, parent, rel_pos, rel_quat} (see weld() below)
         self._install_weld_hook()
+        self._recording = False  # see start_recording()/stop_recording()
+    
+    def start_recording(self, every_n_steps=20, width=480, height=352, distance=1.3, azimuth=135, elevation=-25, center=None):
+        """Begins capturing frames on every subsequent env.step() call (same framing as notebook helpers)."""
+        self._recording = True
+        self._frames = []
+        self._record_every = every_n_steps
+        self._record_counter = 0
+        self._record_renderer = mujoco.Renderer(self.env.model, height=height, width=width)
+        self._record_cam = mujoco.MjvCamera()
+        mujoco.mjv_defaultFreeCamera(self.env.model, self._record_cam)
+        self._record_cam.lookat[:] = np.asarray(
+            center if center is not None else (*self.layout.asm_center, self.table_z), dtype=float)
+        self._record_cam.distance, self._record_cam.azimuth, self._record_cam.elevation = distance, azimuth, elevation
+ 
+        pre_record_step = self.env.step   # whatever step is right now the (eg weld-wrapped version below)
+ 
+        def step_with_recording():
+            pre_record_step()
+            self._record_counter += 1
+            if self._record_counter % self._record_every == 0:
+                mujoco.mj_kinematics(self.env.model, self.env.data)
+                self._record_renderer.update_scene(self.env.data, camera=self._record_cam)
+                self._frames.append(self._record_renderer.render().copy())
+ 
+        self._pre_record_step = pre_record_step
+        self.env.step = step_with_recording
+ 
+    def stop_recording(self):
+        """Remove the recording layer (restoring env.step to whatever it was before) and return the captured frames."""
+        if not self._recording:
+            raise RuntimeError("stop_recording() called without a prior start_recording()")
+        self.env.step = self._pre_record_step
+        self._pre_record_step = None
+        self._recording = False
+        self._record_renderer.close()
+        self._record_renderer = None
+        frames, self._frames = self._frames, []
+        return frames
+
 
     def _install_weld_hook(self):
         """Rigid welding in TAMPanda. TAMPanda already does this in franka_env.py with attach_object_to_ee / _apply_attachment:

@@ -148,3 +148,42 @@ def supporters(bricks):
                 sup.append((below, shared))
         out[b.name] = sorted(sup, key=lambda t: -t[1])
     return out
+
+
+def _neighbor(b: Brick, axis: str):
+    assert axis in ["x", "y"]
+    d = (1, 0) if axis == "x" else (0, 1)
+    nbrs = set((ix + s*d[0], iy + s*d[1]) for (ix, iy) in b.cells for s in [-1, 1]) - b.cells
+    return nbrs
+
+def neighbors(bricks: list[Brick]):
+    by_layer = {}
+    for b in bricks:
+        by_layer.setdefault(b.layer, []).append(b)
+    out = {}
+    for b in bricks:
+        nbrs = {"x": [], "y": []}
+        for axis in ["x", "y"]:
+            for other in by_layer.get(b.layer, []):
+                # same i, j grid-position one layer apart
+                if other.name == b.name:
+                    continue
+
+                shared = len(_neighbor(b, axis=axis) & other.cells)  # NOTE: '&' is intersection operator for sets
+                if shared:
+                    nbrs[axis].append((other, shared))
+
+            nbrs[axis] = sorted(nbrs[axis] , key=lambda t: -t[1])
+        out[b.name] = nbrs
+    return out
+
+
+
+if __name__ == "__main__":
+    bricks, _ = load_task("dataset/ground_truth/tier4/task_001.yaml")
+    for b in bricks: 
+        print(b.name, b.cells)
+    print(_neighbor(bricks[0], "y"))
+    nbrs = neighbors(bricks)
+    print(nbrs)
+    # print({k: [(n[0].name, *n[1:]) for n in ns] for k, ns in nbrs.items()})  # just show brick name

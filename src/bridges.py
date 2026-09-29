@@ -6,7 +6,7 @@ import mujoco
 from tampanda.tamp import DomainBridge
 from tampanda.planners.grasp_planner import GRASP_CONTACT_OFFSET
 
-from yaml_loader import Brick, supporters
+from yaml_loader import Brick, supporters, neighbors
 from emit_coarse import support_tree, root_location, pick_location
 
 from scenes import (
@@ -681,3 +681,129 @@ class LegoBeyondTier2SlotsSLSWeldBridge:
         goals = [("at-target", pddl_name(b.name)) for b in bricks]
         return objects, goals
 
+
+
+
+MAX_NEIGHBORS = 3  # see analysis.ipynb
+GAPS = [f"gap_{i}" for i in range(1, MAX_NEIGHBORS + 1)]  # always at-target and used to fill prepare_place for bricks with <5 supporters
+
+def neighbor_slot_facts(bricks: list[Brick], axis: str) -> list[list[tuple[str, str]]]:
+    """One fact list per numbered slot: slot i of brick b holds its i-th axis-neighbor, else gap_i."""
+    assert axis in ["x", "y"]
+    brick_nbrs = neighbors(bricks)
+    ax_nbrs_slots = [[] for _ in range(MAX_NEIGHBORS)]  # ax_nbrs_slots[i] holds facts for pddl predicate nbr{axis}{i}
+    for name, nbrs in brick_nbrs.items():
+        ax_nbrs = nbrs[axis]
+        if len(ax_nbrs) > MAX_NEIGHBORS:
+            raise ValueError(f"{name} has {len(ax_nbrs)} {axis}-neighbors but the domain only allows {MAX_SUPPORTS}.")
+        for i in range(MAX_NEIGHBORS):
+            s = pddl_name(ax_nbrs[i][0].name) if i < len(ax_nbrs) else GAPS[i]
+            ax_nbrs_slots[i].append((s, pddl_name(name)))
+    return ax_nbrs_slots
+
+
+class LegoBeyondTier2AccessSLSWeldBridge:
+
+    @staticmethod
+    def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
+        bricks = list(scene.bricks.values())
+        real = [pddl_name(b.name) for b in bricks]
+        real_name = {pddl_name(n): n for n in scene.bricks}
+        real_supps = _real_supporters(bricks)
+    
+        # strict precondition doesnt blindly follow plan: checks if the fluents (based on action deltas we returned) also fulfill precon
+        # otherwise mismatch between action effects in pddl domain and our bridge implementation
+        bridge = DomainBridge(domain_path, scene.env, strict_preconditions=strict_preconditions)
+    
+        bridge.fluent("hand-empty", initial=True)
+        bridge.fluent("holding-x")
+        bridge.fluent("holding-y")
+        bridge.fluent("placeable")
+        bridge.fluent("at-target", initial=FILLERS)  # fillers count as "already placed"
+        bridge.fluent("pickable", initial=real)  # fillers are never pickable
+        bridge.fluent("unplaced", initial=real + GAPS)
+        for i, facts in enumerate(supports_slot_facts(bricks), start=1):
+            bridge.fluent(f"supports{i}", initial=facts)
+
+        for ax in ["x", "y"]:
+            for i, facts in enumerate(neighbor_slot_facts(bricks, axis=ax), start=1):
+                bridge.fluent(f"nbr{ax}{i}", initial=facts)
+    
+        def do_place(env, b):
+            brick = real_name[b]
+            supps = real_supps[brick]
+            # weld brick to supporter with largest contact (most studs connected)
+            below = max(supps, key=lambda p: len(p[0].cells & scene.bricks[brick].cells))[0].name if supps else None
+            ok = place_at(scene, env, brick, scene.target_pose[brick], below=below)
+            if ok:
+                scene._held = None
+            return ok
+    
+        @bridge.action("pick_x")
+        def exec_pick_x(env, fluents, b):
+            """NOTE TRICKY: 
+            - pick_x means that we want to pick it up st we place it with gripper along x-axis wrt world coordinates
+            - HOWEVER: inbetween picking and placing we might rotate the brick
+            - => we pick brick along axis st when we rotate brick to target_yaw our axis is along x
+            - eg for 2x2 brick doesnt matter but for 4x2 brick if 90 degree turn it means we need to pick along Y
+            """
+            # see https://snoato.github.io/TAMPanda/tutorial.html#pickplace
+            b = real_name[b]
+            ex = scene.executor
+            pos, half, quat = env.get_object_position(b), env.get_object_half_size(b), env.get_object_orientation(b)
+            cands = scene.grasp_planner.generate_candidates(pos, half, quat)
+            if not ex.pick(b, pos, half, quat, candidates=cands):
+                return False, {}
+            # save brick, relative position of brick and end-effector, orientation of arm
+            scene._held = (b, env.get_object_position(b) - scene.ee_pos(), ex._last_grasp_quat.copy())
+            # return action success and the action effects
+            return True, {("holding", b): True, ("hand-empty",): False}
+
+        @bridge.action("pick_y")
+        def exec_pick_y(env, fluents, b):
+            # see https://snoato.github.io/TAMPanda/tutorial.html#pickplace
+            b = real_name[b]
+            ex = scene.executor
+            pos, half, quat = env.get_object_position(b), env.get_object_half_size(b), env.get_object_orientation(b)
+            cands = scene.grasp_planner.generate_candidates(pos, half, quat)
+            if not ex.pick(b, pos, half, quat, candidates=cands):
+                return False, {}
+            # save brick, relative position of brick and end-effector, orientation of arm
+            scene._held = (b, env.get_object_position(b) - scene.ee_pos(), ex._last_grasp_quat.copy())
+            # return action success and the action effects
+            return True, {("holding", b): True, ("hand-empty",): False}
+
+        # symbolic-only action: nothing to execute, just flips the derived flag
+        @bridge.action("prepare_place")
+        def exec_prepare_place(env, fluents, b, b1, b2, b3, b4, b5):
+            return True, {("placeable", b): True}
+    
+        @bridge.action("place_x")
+        def exec_place_x(env, fluents, b, n1, n2, n3):
+            if not do_place(env, b):
+                return False, {}
+            return True, {
+                ("holding", b): False,
+                ("at-target", b): True,
+                ("pickable", b): False, 
+                ("hand-empty",): True,
+            }
+
+        @bridge.action("place_y")
+        def exec_place_y(env, fluents, b, n1, n2, n3):
+            if not do_place(env, b):
+                return False, {}
+            return True, {
+                ("holding", b): False,
+                ("at-target", b): True,
+                ("pickable", b): False, 
+                ("hand-empty",): True,
+            }
+    
+        return bridge
+
+    @staticmethod
+    def build_objects_and_goal(bricks: list[Brick]):
+        objects = {"brick": [pddl_name(b.name) for b in bricks] + FILLERS + GAPS}
+        goals = [("at-target", pddl_name(b.name)) for b in bricks]
+        return objects, goals
