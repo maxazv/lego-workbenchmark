@@ -97,13 +97,7 @@ class SimpleLegoScene:
         penv = probe.build_env(rate=rate); penv.forward()
         self.table_z = self._table_top(penv)
 
-        self.pick_pose = {}
-        for br, (x, y) in zip(bricks, self._spawn_slots(len(bricks))):
-            pos = np.array([x, y, self.table_z + BRICK_HALF_HEIGHT])
-            yaw = br.initial_yaw or 0
-            self.pick_pose[br.name] = (pos, yaw)
-            b.add_object(br.type, name=br.name, pos=pos.tolist(), quat=qz(yaw).tolist(),
-                         rgba=COLORS.get(br.color, [0.6, 0.6, 0.6, 1]))
+
 
         # set up dict of each bricks target position using the IR
         # note that IR target pos is relative to some arbitrary assembly world coordinate
@@ -115,6 +109,14 @@ class SimpleLegoScene:
             z = self.table_z + BRICK_HALF_HEIGHT + br.layer * LAYER_PITCH
             self.target_pose[br.name] = (np.array([xy[0], xy[1], z]), br.yaw)
  
+        self.pick_pose = {}
+        for br, (x, y) in zip(bricks, self._spawn_slots(len(bricks))):
+            pos = np.array([x, y, self.table_z + BRICK_HALF_HEIGHT])
+            yaw = br.initial_yaw or 0
+            self.pick_pose[br.name] = (pos, yaw)
+            b.add_object(br.type, name=br.name, pos=pos.tolist(), quat=qz(yaw).tolist(),
+                         rgba=COLORS.get(br.color, [0.6, 0.6, 0.6, 1]))
+
         self.env = b.build_env(rate=rate)
         self.env.forward()
         self.env.rest(0.5)
