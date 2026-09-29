@@ -29,9 +29,12 @@ class Layout:
     # thus we just define some zero-points for pick and assembly coordinates in our TAMPanda env coordinate system.
     # chosen so that arm can actually reach the positions.
     asm_center: tuple = (0.45, 0.45)
-    pick_y: float = 0.27
-    pick_x0: float = 0.25
-    pick_spacing: float = 0.10  # how far blocks are apart in initial position (see analysis this is pretty accurate)
+    work_area: tuple = (0.25, 0.65, 0.25, 0.65) # Square area "around" which we may spawn
+    pick_spacing: tuple = (0.08, 0.08)
+    edge_margin: float = 0.03
+    asm_clearance: float = 0.06 # Avoid bridges too close to the edge to be sure
+    brick_radius: float = 0.02
+    arm_base: tuple = (0.0, 0.0)
     table_pos: tuple = (0.0, 0.4, 0.0)
     table_quat: tuple = (0.0, 0.0, 0.0, 1.0)
     grasp_table_clearance: float = 0.004   # GraspPlanner otherwise rejects anything shorter than about 3.5cm (which our bricks are)
@@ -94,14 +97,9 @@ class SimpleLegoScene:
         penv = probe.build_env(rate=rate); penv.forward()
         self.table_z = self._table_top(penv)
 
-        # NOTE: initial positions are relative to some world coordinate
-        # important is just having positions not exactly where they are (no obstruction anyway)
-        # so we just define initial positions such that feasible for TAMPanda arm
-        # (symbolic planner doesnt care anyway)
         self.pick_pose = {}
-        for i, br in enumerate(bricks):
-            pos = np.array([layout.pick_x0 + i * layout.pick_spacing, layout.pick_y,
-                            self.table_z + BRICK_HALF_HEIGHT])
+        for br, (x, y) in zip(bricks, self._spawn_slots(len(bricks))):
+            pos = np.array([x, y, self.table_z + BRICK_HALF_HEIGHT])
             yaw = br.initial_yaw or 0
             self.pick_pose[br.name] = (pos, yaw)
             b.add_object(br.type, name=br.name, pos=pos.tolist(), quat=qz(yaw).tolist(),
@@ -130,6 +128,21 @@ class SimpleLegoScene:
 
         self._welds = []  # list of dicts: {child, parent, rel_pos, rel_quat} (see weld() below)
         self._install_weld_hook()
+
+    # Spawn n bricks with respect to work area (plus clearance) but also margins
+    def _spawn_slots(self, n):
+        L = self.layout
+        x0, x1, y0, y1 = L.work_area
+        dx, dy = L.pick_spacing
+        xs = np.arange(x0 + L.edge_margin, x1 - L.edge_margin + 1e-9, dx)
+        ys = np.arange(y0 + L.edge_margin, y1 - L.edge_margin + 1e-9, dy)
+
+        asm_xy = np.array([p[:2] for p, _ in self.target_pose.values()])
+        min_dist = 2 * L.brick_radius + L.asm_clearance
+        slots = [np.array([x, y]) for x in xs for y in ys
+                 if np.min(np.linalg.norm(asm_xy - [x, y], axis=1)) >= min_dist]
+        slots.sort(key=lambda s: np.linalg.norm(s - np.array(L.arm_base)))
+        return slots[:n]
 
     def _install_weld_hook(self):
         """Rigid welding in TAMPanda. TAMPanda already does this in franka_env.py with attach_object_to_ee / _apply_attachment:
