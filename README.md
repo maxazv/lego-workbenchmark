@@ -1,7 +1,7 @@
 # Lego Workbenchmark
 
 
-## Setup (TODO)
+## 1. Installation (TODO)
 
 ### TAMPanda
 
@@ -64,9 +64,9 @@ pip install pyyaml
 ---
 
 
-## Project Structure (TODO)
+## 2. Project Structure (TODO)
 
-### Overview
+### 2.1 Overview
 ```mermaid
 flowchart LR
     yaml["some_task.yaml"] --> brick["Brick (IR)"]
@@ -78,17 +78,17 @@ flowchart LR
 
 **For an example**, see this [notebook](src/lego_coarse_simple.ipynb).
 
-### YAML Task Files
+### 2.2 YAML Task Files
 > see `src/dataset/ground_truth/tier[1,2]/task_*.yaml` 
 
 Our input/problem: contains target structure and positions of a set of bricks.
 
-### Brick
+### 2.3 Brick
 > see [src/yaml_loader.py](src/yaml_loader.py)
 
 Internal representation of a brick in a specific yaml task (easier to work with than yaml dicts). Hence full yaml task is described by a list containing Brick objects.
 
-### SimpleLegoScene
+### 2.4 SimpleLegoScene
 > see [src/scenes.py](src/scenes.py)
 
 Sets up the [TAMPanda](https://github.com/snoato/TAMPanda) environment for a specific yaml task from its Brick representation. This involves adding the resources, putting the objects in their initial positions etc.
@@ -96,7 +96,7 @@ Additionally, it sets up the executor which allows us to control the arm in the 
 Also contains snap + welding logic (so TAMPanda blocks behave somewhat like Lego bricks).
 - TODO: maybe also some words on the executor
 
-### PDDL Domains
+### 2.5 PDDL Domains
 > see `src/domains/*.pddl` 
 
 Each domain defines a state space graph: set of states and actions (deterministic state transitions) which are encoded via relational state abstraction:
@@ -110,7 +110,7 @@ In our usecase, PDDL serves as an abstraction of our simulation environment. Unr
 We thus represent what we suspect to be the most crucial aspects of the environment states/actions/effects with respect to the planning problem using PDDL domains (modeling).
 
 
-### Bridge
+### 2.6 Bridge
 > see [src/bridges.py](src/bridges.py)
 
 Bridges 'link' the simulation environment (TAMPanda) to the symbolic state space graph (PDDL domain). They also build the goal condition (set of symbolic goal states).
@@ -146,7 +146,7 @@ We assume that after we execute an action $\alpha$ in our TAMPanda environment s
 For example, when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
 This is often solved with regrounding the state and replanning from there after each action execution. Or by defining a better environment action for the symbolic action.
 
-### Using TamPanda for a LEGO Simulation Environment
+### 2.7 Using TamPanda for a LEGO Simulation Environment
 Using TamPanda allowed for the reuse of multiple motion planning tools:
 - `RRTStar` for the arm's motion planning
 - `GraspPlanner` to generate candidate configurations for the gripper
@@ -156,11 +156,11 @@ With this motion planning framework at hand, it remains to initialize and adjust
 
 Notably, our blocks do not have any studs, nor does our environment include a ground plate for the designated assembly area. Although such simplifications may seem detrimental, the environment still suffices the needs of engineering a PDDL Domain fit to the WorkBenchMark tasks: Since a solution is described with precise coordinates, there is no need to check stud-level alignment for blocks. Any valid goal only includes stackings that fulfil the alignments of studs, therefore we can make the abstraction from bricks that are stacked to blocks that are welded together. Since this is not default behaviour, [LegoCoarseSimpleV2SLSWeldBridge](src/bridges.py) includes a welding step that snaps a block to a "child", i.e. a block underneath or the table (corresponding to a ground plate). This must happen during the place action when the block is within close vicinity of its child, i.e., right when the gripper releases. If there were a need to pick blocks that are already stacked, the pick-action would require the removal of a weld. Realistically, there is no need since the tasks requires no such plans.
 
-## Experiments and Results
+## 3. Experiments and Results
 
 In the following we give a "historical report" of our experiments and some results. Not every detail will be included but we tried to keep the repository as structured as possible without deleting any of our attempts.
 
-### First Attempts
+### 3.1 First Attempts
 - where we didnt have simulation environment and were trying to figure out lego_sim
 - using quantifiers and other more advanced PDDL operators etc (see lego_coarse.pddl and lego_granular.pddl)
 - also assumed distractor blocks were present
@@ -169,7 +169,7 @@ In the following we give a "historical report" of our experiments and some resul
 - in next domains we omitted these and followed the exercise domains to be able to use DomainBridge
 - did some minor tests but was abandoned after we commited to TAMPanda env
 
-### Single Supporter Constraints
+### 3.2 Single Supporter Constraints
 - lego_coarse_simple.pddl and lego_coarse_simple_v2
 - lego_coarse_simple.pddl was a nearly one-to-one copy of the exercise domains
     - goals are now defined using brick names instead of existentials over shape/color etc
@@ -185,7 +185,7 @@ In the following we give a "historical report" of our experiments and some resul
     - a valid brick placement order respecting the constraint is any topological sort of the DAG
     - but one drawback is that stacked_on as defined in domain can only have one parent => see next domain
 
-### Going Beyond Tier 2: Vertical Precedence
+### 3.3 Going Beyond Tier 2: Vertical Precedence
 ##### **[Supporter Precedence](src/TODO)**
 - first idea was to extend supporter constraint to cell-level (lego_beyond_tier2.pddl)
     - ie brick can only be placed if all the studs of the brick that have some support in target are supported
@@ -211,7 +211,7 @@ In the following we give a "historical report" of our experiments and some resul
 ##### **[Layer Precedence](src/TODO)**
 Another approach to solve precedence issues involves declaring an ordering of all possible height levels within the PDDL domain. We require two forms of bookkeeping per action: Which level are we at, and how many bricks are left at each level. Corresponding fluents must be defined at the initialization of the bridge. The planner starts at ground level, with the `remaining`-predicate specifying how many bricks are left to place at this level. To count down, we have to introduce a successor relationship `succ` for the type `num`. Once all bricks of a level are placed, the planner symbolically "opens" the next level. This solves any vertical precedence issues, but we remain susceptible to bricks obstructing each other at the same level.
 
-#### Neighbor Precedence
+#### 3.4 Neighbor Precedence
 There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
 
 ##### **[Neighbor Constraints](src/TODO)**
@@ -228,15 +228,15 @@ To extend the layerwise-approach, again, pick-, place- and stack-actions must be
 
 Note (TODO): If we do not manage to complete these, I would still include at least the domains to show that such adjustment is logically feasible. 
 
-### Comparison with ABD Baseline
+### 3.5 Comparison with ABD Baseline
 In our [evaluation](src/eval_baseline.ipynb), we collect statistics on success rate and planning time. Notably, the ABD baseline, as stated in the paper, fails even at some level 1&2 tasks. This clearly showcases indicates our comparison underlies a caveat: Our work does not include perception but works with the simulation's ground truth, a simplification that saves both overhead in time as well as errors. Therefore, we run an ABD planner's recipe through our executors and observe equivalent outcomes, but found at much faster planning speed, taking roughly a hundredth of time on average. Overall, our pipeline yields a 100% success rate for planning and execution across tier 1 and 2 of the WorkBenchMark dataset.
 
-## Limitations
+## 4. Limitations
 Maybe some words on limitations (yea but more general like setup as domain-specific limitations already discussed)
 - e.g. stacking on multiple bricks as happens in Tier 3&4 (unless we find a fix)
 - also that our pipeline does no replanning, since we kinda don't need it atm
 - 
-## Conclusion and Outlook
+## 5. Conclusion and Outlook
 - eg what can we say on the problem itself: it can be solved with PDDL in simplified sim env
 - what it reduces to (layer/supporter/neighbor order constraints)
 - ...
