@@ -94,6 +94,7 @@ Internal representation of a brick in a specific yaml task (easier to work with 
 Sets up the [TAMPanda](https://github.com/snoato/TAMPanda) environment for a specific yaml task from its Brick representation. This involves adding the resources, putting the objects in their initial positions etc.
 Additionally, it sets up the executor which allows us to control the arm in the TAMPanda environment (ie our env actions).
 Also contains snap + welding logic (so TAMPanda blocks behave somewhat like Lego bricks).
+- TODO: maybe also some words on the executor
 
 ### PDDL Domains
 > see `src/domains/*.pddl` 
@@ -104,6 +105,10 @@ Each domain defines a state space graph: set of states and actions (deterministi
     - State is the current set of true relations
 - Actions that change the current true relations
     - Hence actions transition to different states
+
+In our usecase, PDDL serves as an abstraction of our simulation environment. Unrolling each possible trajectory using every possible action of a physics simulation is infeasible.
+We thus represent what we suspect to be the most crucial aspects of the environment states/actions/effects with respect to the planning problem using PDDL domains (modeling).
+
 
 ### Bridge
 > see [src/bridges.py](src/bridges.py)
@@ -138,7 +143,7 @@ Let $s, s'$ be TAMPanda environemtn states and $t, t'$ PDDL symbolic states. Let
                        a
 ```
 We assume that after we execute an action $\alpha$ in our TAMPanda environment state $s$ that the new state we reach $s'$ still aligns with the symbolic state $t'$, but often that is not the case.
-Eg when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
+For example, when stacking a brick on a tower (the action being stack, the new state being the brick on the tower), the brick might slip while the symbolic state $t'$ represents a brick placed on a tower.
 This is often solved with regrounding the state and replanning from there after each action execution. Or by defining a better environment action for the symbolic action.
 
 ### Using TamPanda for a LEGO Simulation Environment
@@ -155,20 +160,44 @@ Notably, our blocks do not have any studs, nor does our environment include a gr
 
 ### First Attempts
 - where we didnt have simulation environment
-- using quantifiers etc
+- using quantifiers and other more advanced PDDL operators etc
+- also assumed distractor blocks were present
+- only wanted to identify blocks by their shape/color instead of name/id => existential goal
+- required us to plan using fast-downward
+- in next domains we omitted these and followed the exercise domains to be able to use DomainBridge
 
-### lego_coarse_simple.pddl and lego_coarse_simple_v2
-- a simple constraint is that to place a brick any brick directly below it (supporter) must be placed
+### Single Supporter Constraints
+- lego_coarse_simple.pddl and lego_coarse_simple_v2
+- lego_coarse_simple was a nearly one-to-one copy of the exercise domain
+- goals are now defined using brick names
+- for lego_coarse_simple_v2 realized that with brick names color/shape become unnecessary as goal conditions can all preprocessed
+- only object type in domain is brick => all predicates are over bricks
+- also we should never have to pick/unstack a brick once placed in a plan
+- => plan reduces to finding a good ordering of the bricks
+- idea: a simple ordering constraint is that to place a brick any brick directly below it (supporter) must be placed
 - this builds a supporter graph (specifically, directed acyclic graph)
 - a valid brick placement order respecting the constraint is any topological sort of the DAG
-- but one drawback is that stacked_on as defined in domain can only have one parent => next domain
+- but one drawback is that stacked_on as defined in domain can only have one parent => see next domain
 
 ### Going Beyond Tier 2: Vertical Precedence
 ##### **[Supporter Precedence](src/TODO)**
-- allows us to define multiple supporters per brick
-- tricks used and what problems they solve and their drawbacks:
-    - filler bricks
-    - supporter{i}
+- first idea was to extend supporter constraint to cell-level (lego_beyond_tier2.pddl)
+    - ie brick can only be placed if all the studs of the brick that have some support in target are supported
+    - pros: most general
+    - problems: product explodes exponentially in number of cells
+- => realized we can just go back to brick-level support and only brick relations (beyond_tier2_v2.pddl)
+    - now we can define multiple supporters per brick
+    - however first modeling attempt needed to use diff predicate to prevent planner from usign same brick in params
+    - inefficient
+- => new domain lego_beyond_tier2_slots.pddl introduces some tricks for more efficient planning:
+    - from domain analysis we realized that in whole dataset a brick has at most 5 supporters
+    - => prepare_place takes fixed 5 args and use filler bricks if some brick has <5 supporters
+    - supporter{i} combines the diff and supporter predicate into one and optimizes parameter filtering in pyperplan
+    - problems: 
+        - overfit on dataset because cant have more than 5 supporters
+            - but could just make script that automatically writes domain for some number of max supporters
+            - however lego bricks usually dont have that many supportes anyway
+            - otherwise if ever had 8x2 brick: break it apart into two 4x2 bricks and add constraints that they are together
 
 
 ##### **[Layer Precedence](src/TODO)**
@@ -178,8 +207,13 @@ Another approach to solve precedence issues involves declaring an ordering of al
 There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
 
 ##### **[Neighbor Constraints](src/TODO)**
+- we realized that if unlucky planner placed bricks within one layer st impossible to place brick without gripper obstruction
 - new ordering constraint: brick can be placed iff no neighbor along a gripper axis is placed 
+- => lego_beyond_tier2_access (its just lego_beyond_tier_2_slots + new constraint):
+- requires domain to also know along which axis brick WILL be placed
+- however main difficulty is the executor
 
+<br>
 
 - [Layer Precedence_Axis_Aware](src/TODO)
 To extend the layerwise-approach, again, pick-, place- and stack-actions must be split by axis so the planner can choose and consistently maintain the grasp orientation. Before we pick and place a block, the planner must verify that the target location is still neighborless for at least one axis. To this end, the bridge initializes neighbor-relations (`x-neighbor`/`y-neighbor`) between blocks' target locations, and initially equivalent checklist-relations (`x-to-be-checked`/`y-to-be-checked`), which are later falsified one-by-one by our check-actions (`check-x`/`check-y`). Since all checks must succeed right before picking and placing/stacking a block, it is important to precede the checks by a `select`-action. This is analogous to the layerwise precedence: Before, the planner counted down the number of blocks per layer before selecting the next one. Now we count down `x-checks-remaining`/`y-checks-remaining` before picking, placing/stacking and then selecting the next block, conveniently re-using the successor relationship `succ`.
