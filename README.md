@@ -62,10 +62,10 @@ Committed results (seed 0 for `eval.py`, seed 42 for `run_eval.py`):
 | ABD order through our executor, success | 100 % | 100 % | | | `results/execution_seed42.csv` |
 | PDDL planning time per task | 0.05 s | 0.08 s | 0.08 s | 0.09 s | same files |
 
-### 1.6 Notebooks, in reading order
+### 1.6 Notebooks (read in order in the best case)
 Start Jupyter from `src/` with the venv kernel: `cd src && python -m jupyterlab`
 
-1. `report.ipynb`: results per domain read from the CSVs above, with a rendered demo of one task each . 
+1. `report.ipynb`: results per domain read from the CSVs above, with a rendered demo of one task each
 2. `lego_coarse_simple.ipynb`: the pipeline on a single task, step by step with renders: load task, build scene, plan, execute, score.
 3. `beyond_tier2.ipynb`, `beyond_tier2_access.ipynb`: the tier 3 and 4 domains (multi-supporter slots, neighbour access) and their failure cases
 4. `eval_baseline.ipynb`: comparison with the assembly by disassembly baseline, planning and execution, plus the published numbers
