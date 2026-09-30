@@ -158,7 +158,7 @@ Notably, our blocks do not have any studs, nor does our environment include a gr
 
 ## 3. Experiments and Results
 
-In the following we give a "historical report" of our experiments and some results. Not every detail will be included but we tried to keep the repository as structured as possible without deleting any of our attempts.
+In the following we give a "historical report" of our experiments and some results. Not every detail will be included but we tried to keep the repository as structured as possible without deleting any of our experiments.
 
 ### 3.1 First Attempts
 - where we didnt have simulation environment and were trying to figure out lego_sim
@@ -183,10 +183,10 @@ In the following we give a "historical report" of our experiments and some resul
     - idea: a simple ordering constraint is that to place a brick any brick directly below it (supporter) must be placed
     - this builds a supporter graph (specifically, directed acyclic graph)
     - a valid brick placement order respecting the constraint is any topological sort of the DAG
-    - but one drawback is that stacked_on as defined in domain can only have one parent => see next domain
+    - but one drawback is that stacked_on as defined in domain can only have one parent => see next domains
 
 ### 3.3 Going Beyond Tier 2: Vertical Precedence
-##### **[Supporter Precedence](src/TODO)**
+#### 3.3.1 Multi-Supporter Constraints
 - first idea was to extend supporter constraint to cell-level (lego_beyond_tier2.pddl)
     - ie brick can only be placed if all the studs of the brick that have some support in target are supported
     - pros: most general
@@ -208,22 +208,21 @@ In the following we give a "historical report" of our experiments and some resul
     - needed to manually write place as brick needs to snap and then be welded during after release
 
 
-##### **[Layer Precedence](src/TODO)**
+#### 3.3.2 [Layer Precedence](src/TODO)
 Another approach to solve precedence issues involves declaring an ordering of all possible height levels within the PDDL domain. We require two forms of bookkeeping per action: Which level are we at, and how many bricks are left at each level. Corresponding fluents must be defined at the initialization of the bridge. The planner starts at ground level, with the `remaining`-predicate specifying how many bricks are left to place at this level. To count down, we have to introduce a successor relationship `succ` for the type `num`. Once all bricks of a level are placed, the planner symbolically "opens" the next level. This solves any vertical precedence issues, but we remain susceptible to bricks obstructing each other at the same level.
 
-#### 3.4 Neighbor Precedence
+### 3.4 Neighbor Precedence
 There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
 
-##### **[Neighbor Constraints](src/TODO)**
+#### 3.4.1 Supporter and Neighbor Constraints
 - we realized that if unlucky planner placed bricks within one layer st impossible to place brick without gripper obstruction
 - new ordering constraint: brick can be placed iff no neighbor along a gripper axis is placed 
 - => lego_beyond_tier2_access (its just lego_beyond_tier_2_slots + new constraint):
 - requires domain to also know along which axis brick WILL be placed
 - however main difficulty is the executor
 
-<br>
 
-- [Layer Precedence_Axis_Aware](src/TODO)
+#### 3.4.2 [Layer Precedence_Axis_Aware](src/TODO)
 To extend the layerwise-approach, again, pick-, place- and stack-actions must be split by axis so the planner can choose and consistently maintain the grasp orientation. Before we pick and place a block, the planner must verify that the target location is still neighborless for at least one axis. To this end, the bridge initializes neighbor-relations (`x-neighbor`/`y-neighbor`) between blocks' target locations, and initially equivalent checklist-relations (`x-to-be-checked`/`y-to-be-checked`), which are later falsified one-by-one by our check-actions (`check-x`/`check-y`). Since all checks must succeed right before picking and placing/stacking a block, it is important to precede the checks by a `select`-action. This is analogous to the layerwise precedence: Before, the planner counted down the number of blocks per layer before selecting the next one. Now we count down `x-checks-remaining`/`y-checks-remaining` before picking, placing/stacking and then selecting the next block, conveniently re-using the successor relationship `succ`.
 
 Note (TODO): If we do not manage to complete these, I would still include at least the domains to show that such adjustment is logically feasible. 
