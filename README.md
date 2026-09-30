@@ -1,64 +1,83 @@
 # Lego Workbenchmark
 
 
-## 1. Installation (TODO)
+## 1. Installation
 
-### TAMPanda
+We worked in no GPU and no ROS. Everything runs on the CPU
 
-Install:
+### 1.1 Python environment
 ```bash
-git clone https://github.com/snoato/TAMPanda.git
-cd tampanda
-pip install -e .
+git clone https://github.com/maxazv/lego-workbenchmark.git
+cd lego-workbenchmark
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-Now create symlink inside `src/`:
-```bash
-cd src
-ln -s ../TAMPanda/tampanda .
-```
+`up_fast_downward` ships the Fast Downward binary; nothing has to be compiled.
 
-### WorkBenchMark Dataset
-In main repo folder (ie one folder level above src: `src\..`):
+### 1.2 External repositories
+Three repositories are cloned next to this one and linked into `src/`. The links are ignored by git.
 ```bash
-git clone https://github.com/WorkBenchMark/dataset.git
-```
-Now create symlink inside `src/`:
-```bash
-cd src
-ln -s ../dataset .
-```
-
-### Lego Simulator (optional)
-Only the pure-Python planner `executor_planner.py` is used (no ROS, no MuJoCo needed)
-```bash
-git clone https://github.com/ma-haha-hehe/lego_sim.git
-
+cd ..
+git clone https://github.com/snoato/TAMPanda.git            # simulator + DomainBridge 
+git clone https://github.com/WorkBenchMark/dataset.git      # the 400 benchmark tasks
+git clone https://github.com/ma-haha-hehe/lego_sim.git       # only for the pure pyython ABD planner
+pip install -e TAMPanda
 cd lego-workbenchmark/src
-ln -s ../../lego_sim/src/mj_bridge/mj_bridge mj_bridge   # For ABD baseline planner
+ln -s ../../dataset dataset
+ln -s ../../lego_sim/src/mj_bridge/mj_bridge mj_bridge
 ```
 
-### Fast-Downward (optional)
+### 1.3 Check
+From `src/`:
 ```bash
-git clone https://github.com/aibasel/downward.git
-cd downward
-./build.py
-```
-Check whether `downward/fast-downward.py` exists.
-To run solver, do
-```bash
-./<path-to-downwrad>/fast-downward.py path/to/pddl-domain.pddl path/to/problem.pddl --search "astar(blind())"
+python -c "import tampanda, mujoco, unified_planning, mink; from mj_bridge.executor_planner import plan_assembly; print('ok')"
 ```
 
-Example inside of `lego-workbenchmark`:
+### 1.4 Quick start: one task, end to end
+From `src/`. Plans tier 2 task 001 with the current domain, executes it in MuJoCo, scores it:
 ```bash
+python eval.py --tasks tier2/task_001 --bridge simple_v2_welds --workers 1 --out ../results/quickstart.csv
+```
+The CSV has one row: `planned`, `plan_len`, `executed`, `goal_ok`, `max_dxy_mm`, `max_dyaw_deg`.
+`goal_ok=True` means every brick ended within 6 mm / 6 deg of its target pose.
+
+### 1.5 Reproduce the results
+All commands from `src/` 
+
+| What | Command | Output | Time |
+|---|---|---|---|
+| PDDL problem files | `python generate_problems.py dataset tier1 coarse` (same for tier2, granular) | `generated/problems_*/` | seconds |
+| Tier 1+2 sweep, simple_v2 domain | `python eval.py --tiers tier1 tier2 --bridge simple_v2_welds --workers 4 --out generated/evals/simple_v2_welds_t1t2.csv` | 200 rows  |
+| All four tiers, slots domain | `python eval.py --tiers tier1 tier2 tier3 tier4 --bridge slots --workers 4 --out generated/evals/slots_t1234.csv` | 400 rows |
+| ABD baseline vs PDDL, execution | `python run_eval.py --tiers 1 2 --every 5 --seed 42 --out ../results/execution_seed42.csv` | one row per task and planner |
+| ABD baseline vs PDDL, tables and figure | open `eval_baseline.ipynb`, run all cells | `results/planning.csv`, `results/figures/` |
+
+Committed results (seed 0 for `eval.py`, seed 42 for `run_eval.py`):
+
+| Domain / evaluation | Tier 1 | Tier 2 | Tier 3 | Tier 4 | File |
+|---|---|---|---|---|---|
+| simple_v2 + welds, success | 100 % | 100 % | | | `src/generated/evals/simple_v2_welds_t1t2.csv` |
+| slots + welds, success | 100 % | 100 % | 70 % | 27 % | `src/generated/evals/slots_t1234.csv` |
+| ABD order through our executor, success | 100 % | 100 % | | | `results/execution_seed42.csv` |
+| PDDL planning time per task | 0.05 s | 0.08 s | 0.08 s | 0.09 s | same files |
+
+### 1.6 Notebooks, in reading order
+Start Jupyter from `src/` with the venv kernel: `cd src && python -m jupyterlab`
+
+1. `report.ipynb`: results per domain read from the CSVs above, with a rendered demo of one task each . 
+2. `lego_coarse_simple.ipynb`: the pipeline on a single task, step by step with renders: load task, build scene, plan, execute, score.
+3. `beyond_tier2.ipynb`, `beyond_tier2_access.ipynb`: the tier 3 and 4 domains (multi-supporter slots, neighbour access) and their failure cases
+4. `eval_baseline.ipynb`: comparison with the assembly by disassembly baseline, planning and execution, plus the published numbers
+5. `analysis.ipynb`: dataset statistics that motivated the domain choices (bricks per task, supporters per brick)
+
+`assembly.ipynb` and `assembly_blocks.ipynb` are early experiments kept for history; they are not needed to evaluate the project
+
+### 1.7 Optional: Fast Downward from source
+Only needed for `run_solver.py`, which calls the `fast-downward.py` script directly on the generated problem files
+```bash
+git clone https://github.com/aibasel/downward.git && cd downward && ./build.py
 ./downward/fast-downward.py src/domains/lego_coarse.pddl src/generated/problems_coarse/tier1/task_001.pddl --search "astar(blind())"
-```
-
-
-### Other
-```bash
-pip install pyyaml
-```
 
 
 ---
