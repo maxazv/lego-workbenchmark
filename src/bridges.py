@@ -36,6 +36,7 @@ def execute_plan(bridge, plan):
 class LegoCoarseSimpleSLSBridge:
     # domain_path = ""
 
+    @staticmethod
     def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
@@ -114,6 +115,7 @@ class LegoCoarseSimpleSLSBridge:
 
         return bridge
 
+    @staticmethod
     def build_objects_and_goal(bricks: list[Brick]):
         """Set up all objects, predicates and goal conditions for bridge (NOTE that this is for lego_coarse_simple.pddl domain)"""
         parent, children, multi = support_tree(bricks)
@@ -131,6 +133,7 @@ class LegoCoarseSimpleSLSBridge:
 class LegoCoarseSimpleV2SLSBridge:
     # domain_path = ""
 
+    @staticmethod
     def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
@@ -209,6 +212,7 @@ class LegoCoarseSimpleV2SLSBridge:
 
         return bridge
 
+    @staticmethod
     def build_objects_and_goal(bricks: list[Brick]):
         """Set up all objects, predicates and goal conditions for bridge (NOTE that this is for lego_coarse_simple.pddl domain)"""
         parent, children, multi = support_tree(bricks)
@@ -225,6 +229,7 @@ class LegoCoarseSimpleV2SLSBridge:
 class LegoCoarseSimpleV2SLSWeldBridge:
     # domain_path = ""
 
+    @staticmethod
     def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
@@ -369,6 +374,7 @@ class LegoCoarseSimpleV2SLSWeldBridge:
 
         return bridge
 
+    @staticmethod
     def build_objects_and_goal(bricks: list[Brick]):
         """Set up all objects, predicates and goal conditions for bridge (NOTE that this is for lego_coarse_simple.pddl domain)"""
         parent, children, multi = support_tree(bricks)
@@ -479,6 +485,7 @@ class LegoBeyondTier2SLSWeldBridge:
     # domain_path = ""
     # TODO: doesnt work yet, but too lazy to fix because bridge below is better idea
 
+    @staticmethod
     def make_bridge(domain_path, scene: SimpleLegoScene, strict_preconditions=False):
         """Set up the DomainBridge between the PDDL domain and the SimpleLegoScene (env and executor).
         Ie we have to connect/track predicates to the bridge and define the symbolic actions in the environment.
@@ -581,6 +588,7 @@ class LegoBeyondTier2SLSWeldBridge:
 
         return bridge
 
+    @staticmethod
     def build_objects_and_goal(bricks: list[Brick]):
         objects = {
             "brick": [pddl_name(b.name) for b in bricks],

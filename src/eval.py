@@ -40,6 +40,8 @@ DOMAIN_FOLDER = "domains"
 
 # name -> (bridge namespace, default domain .pddl file)
 BRIDGES = {
+    "simple": (LegoCoarseSimpleSLSBridge, "lego_coarse_simple.pddl"),
+    "simple_v2": (LegoCoarseSimpleV2SLSBridge, "lego_coarse_simple_v2.pddl"),
     "simple_v2_welds": (LegoCoarseSimpleV2SLSWeldBridge, "lego_coarse_simple_v2.pddl"),
     "slots": (LegoBeyondTier2SlotsSLSWeldBridge, "lego_beyond_tier2_slots.pddl"),
 }
