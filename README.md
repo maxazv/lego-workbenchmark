@@ -1,5 +1,6 @@
 # Lego Workbenchmark
 
+![demo](src/generated/demos/readme_demo_v2.gif)
 
 ## 1. Installation (TODO)
 
@@ -94,7 +95,6 @@ Internal representation of a brick in a specific yaml task (easier to work with 
 Sets up the [TAMPanda](https://github.com/snoato/TAMPanda) environment for a specific yaml task from its Brick representation. This involves adding the resources, putting the objects in their initial positions etc.
 Additionally, it sets up the executor which allows us to control the arm in the TAMPanda environment (ie our env actions).
 Also contains snap + welding logic (so TAMPanda blocks behave somewhat like Lego bricks).
-- TODO: maybe also some words on the executor
 
 ### 2.5 PDDL Domains
 > see `src/domains/*.pddl` 
@@ -211,7 +211,7 @@ In the following we give a "historical report" of our experiments and some resul
 #### 3.3.2 [Layer Precedence](src/TODO)
 Another approach to solve precedence issues involves declaring an ordering of all possible height levels within the PDDL domain. We require two forms of bookkeeping per action: Which level are we at, and how many bricks are left at each level. Corresponding fluents must be defined at the initialization of the bridge. The planner starts at ground level, with the `remaining`-predicate specifying how many bricks are left to place at this level. To count down, we have to introduce a successor relationship `succ` for the type `num`. Once all bricks of a level are placed, the planner symbolically "opens" the next level. This solves any vertical precedence issues, but we remain susceptible to bricks obstructing each other at the same level.
 
-### 3.4 Neighbor Precedence
+### 3.4 Neighbor Constraints
 There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
 
 #### 3.4.1 Supporter and Neighbor Constraints
@@ -220,6 +220,7 @@ There is always a possibility of bricks obstructing each other at the same heigh
 - => lego_beyond_tier2_access (its just lego_beyond_tier_2_slots + new constraint):
 - requires domain to also know along which axis brick WILL be placed
 - however main difficulty is the executor
+- TODO better gripper sequence: only open gripper slightly when releasing brick, then fully when in highest spot
 
 
 #### 3.4.2 [Layer Precedence_Axis_Aware](src/TODO)
