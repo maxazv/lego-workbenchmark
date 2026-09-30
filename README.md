@@ -151,22 +151,34 @@ With this motion planning framework at hand, it remains to initialize and adjust
 
 Notably, our blocks do not have any studs, nor does our environment include a ground plate for the designated assembly area. Although such simplifications may seem detrimental, the environment still suffices the needs of engineering a PDDL Domain fit to the WorkBenchMark tasks: Since a solution is described with precise coordinates, there is no need to check stud-level alignment for blocks. Any valid goal only includes stackings that fulfil the alignments of studs, therefore we can make the abstraction from bricks that are stacked to blocks that are welded together. Since this is not default behaviour, [LegoCoarseSimpleV2SLSWeldBridge](src/bridges.py) includes a welding step that snaps a block to a "child", i.e. a block underneath or the table (corresponding to a ground plate). This must happen during the place action when the block is within close vicinity of its child, i.e., right when the gripper releases. If there were a need to pick blocks that are already stacked, the pick-action would require the removal of a weld. Realistically, there is no need since the tasks requires no such plans.
 
-### Domain Timeline
-#### Tier 1 & 2
-TODO
+## Experiments and Results
 
-#### Tier 3 & 4: Vertical Precedence
-- [Stack Precedence](src/TODO)
-TODO (Max)
+### First Attempts
+- where we didnt have simulation environment
+- using quantifiers etc
+
+### lego_coarse_simple.pddl and lego_coarse_simple_v2
+- a simple constraint is that to place a brick any brick directly below it (supporter) must be placed
+- this builds a supporter graph (specifically, directed acyclic graph)
+- a valid brick placement order respecting the constraint is any topological sort of the DAG
+- but one drawback is that stacked_on as defined in domain can only have one parent => next domain
+
+### Going Beyond Tier 2: Vertical Precedence
+##### **[Supporter Precedence](src/TODO)**
+- allows us to define multiple supporters per brick
+- tricks used and what problems they solve and their drawbacks:
+    - filler bricks
+    - supporter{i}
 
 
-- [Layer Precedence](src/TODO)
+##### **[Layer Precedence](src/TODO)**
 Another approach to solve precedence issues involves declaring an ordering of all possible height levels within the PDDL domain. We require two forms of bookkeeping per action: Which level are we at, and how many bricks are left at each level. Corresponding fluents must be defined at the initialization of the bridge. The planner starts at ground level, with the `remaining`-predicate specifying how many bricks are left to place at this level. To count down, we have to introduce a successor relationship `succ` for the type `num`. Once all bricks of a level are placed, the planner symbolically "opens" the next level. This solves any vertical precedence issues, but we remain susceptible to bricks obstructing each other at the same level.
 
-#### Tier 3 & 4: Horizontal Precedence
-There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Stack Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
-- [Stack Precedence_Axis_Aware](src/TODO)
-TODO (Max)
+#### Neighbor Precedence
+There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
+
+##### **[Neighbor Constraints](src/TODO)**
+- new ordering constraint: brick can be placed iff no neighbor along a gripper axis is placed 
 
 
 - [Layer Precedence_Axis_Aware](src/TODO)
@@ -174,13 +186,15 @@ To extend the layerwise-approach, again, pick-, place- and stack-actions must be
 
 Note (TODO): If we do not manage to complete these, I would still include at least the domains to show that such adjustment is logically feasible. 
 
-### Benchmark & Results
+### Comparison with ABD Baseline
 In our [evaluation](src/eval_baseline.ipynb), we collect statistics on success rate and planning time. Notably, the ABD baseline, as stated in the paper, fails even at some level 1&2 tasks. This clearly showcases indicates our comparison underlies a caveat: Our work does not include perception but works with the simulation's ground truth, a simplification that saves both overhead in time as well as errors. Therefore, we run an ABD planner's recipe through our executors and observe equivalent outcomes, but found at much faster planning speed, taking roughly a hundredth of time on average. Overall, our pipeline yields a 100% success rate for planning and execution across tier 1 and 2 of the WorkBenchMark dataset.
 
-### Limitations
-Maybe some words on limitations
+## Limitations
+Maybe some words on limitations (yea but more general like setup as domain-specific limitations already discussed)
 - e.g. stacking on multiple bricks as happens in Tier 3&4 (unless we find a fix)
 - also that our pipeline does no replanning, since we kinda don't need it atm
 - 
-### Conclusion 
-
+## Conclusion and Outlook
+- eg what can we say on the problem itself: it can be solved with PDDL in simplified sim env
+- what it reduces to (layer/supporter/neighbor order constraints)
+- ...
