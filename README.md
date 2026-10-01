@@ -311,7 +311,7 @@ To extend the layerwise-approach, again, pick-, place- and stack-actions must be
 In our [evaluation](src/eval_baseline.ipynb), we collect statistics on success rate and planning time. Notably, the ABD baseline, as stated in the paper, fails even at some level 1&2 tasks. This clearly showcases indicates our comparison underlies a caveat: Our work does not include perception but works with the simulation's ground truth, a simplification that saves both overhead in time as well as errors. Therefore, we run an ABD planner's recipe through our executors and observe equivalent outcomes, but found at much faster planning speed, taking roughly a hundredth of time on average. Overall, our pipeline yields a 100% success rate for planning and execution across tier 1 and 2 of the WorkBenchMark dataset.
 
 
-### 3.6 Tier vs Domain Overview Table
+### 3.6 Tier vs Domain Success Table
 | tier   | simple   | simple_v2   | simple_v2_welds   |   slots |
 |:-------|:---------|:------------|:------------------|--------:|
 | tier1  | 100.0    | 100.0       | 100.0             |     100 |
