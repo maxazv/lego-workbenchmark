@@ -5,7 +5,7 @@
 
 ## 1. Installation
 
-We worked in no GPU and no ROS. Everything runs on the CPU
+We worked usind no GPU and no ROS. Everything runs on the CPU
 
 ### 1.1 Python environment
 ```bash
@@ -71,7 +71,7 @@ Committed results (seed 0 for `eval.py`, seed 42 for `run_eval.py`):
 ### 1.6 Notebooks (read in order in the best case)
 Start Jupyter from `src/` with the venv kernel: `cd src && python -m jupyterlab`
 
-1. `report.ipynb`: results per domain, with rendered demos of some tasks
+1. `report.ipynb`: results per domain, with some demos of some tasks
 2. `lego_coarse_simple.ipynb`: the pipeline on a single task, step by step with renders: load task, build scene, plan, execute, score.
 3. `beyond_tier2.ipynb`, `beyond_tier2_access.ipynb`: the tier 3 and 4 domains (multi-supporter slots, neighbour access) and their failure cases
 4. `eval_baseline.ipynb`: comparison with the assembly by disassembly baseline, planning and execution, plus the published numbers
@@ -185,7 +185,7 @@ Notably, our blocks do not have any studs, nor does our environment include a gr
 In the following we give a "historical report" of our experiments and some results. Not every detail will be included but we tried to keep the repository as structured as possible without deleting any of our experiments.
 
 ### 3.1 First Attempts
-- didnt yet have a simulation environment and trying to figure out [lego_sim](https://github.com/ma-haha-hehe/lego_sim)
+- It didnt yet have a simulation environment and trying to figure out [lego_sim](https://github.com/ma-haha-hehe/lego_sim)
 - used quantifiers and other more advanced PDDL operators etc (see [lego_coarse.pddl](src/domains/lego_coarse.pddl) and [lego_granular.pddl](src/domains/lego_granular.pddl))
 - we assumed distractor blocks were present (not neccessary for assembly)
 - identify blocks by their shape/color instead of name/id $\Rightarrow$ existential goal
