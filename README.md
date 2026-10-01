@@ -77,9 +77,11 @@ Start Jupyter from `src/` with the venv kernel: `cd src && python -m jupyterlab`
 ### 1.7 Optional: Fast Downward from source
 Only needed for `run_solver.py`, which calls the `fast-downward.py` script directly on the generated problem files
 ```bash
+# clone and build
 git clone https://github.com/aibasel/downward.git && cd downward && ./build.py
+# then test-run with
 ./downward/fast-downward.py src/domains/lego_coarse.pddl src/generated/problems_coarse/tier1/task_001.pddl --search "astar(blind())"
-
+```
 
 ---
 
@@ -95,8 +97,6 @@ flowchart LR
     scene --> bridge
     bridge --> plan["plan"]
 ```
-
-**For an example**, see this [notebook](src/lego_coarse_simple.ipynb).
 
 ### 2.2 YAML Task Files
 > see `src/dataset/ground_truth/tier[1,2]/task_*.yaml` 
