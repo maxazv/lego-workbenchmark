@@ -1,3 +1,4 @@
+
 # Lego Workbenchmark
 
 ![demo](src/generated/demos/readme_demo_v2.gif)
@@ -253,9 +254,9 @@ The next two domains `lego_coarse_simple.pddl` and`lego_coarse_simple_v2.pddl` i
 - $\Rightarrow$ see next domains
 
 ### 3.3 Going Beyond Tier 2: Vertical Precedence
-#### 3.3.1 Multi-Supporter Constraints
+#### 3.3.1 [Multi-Supporter Constraints](src/domains/lego_beyond_tier2_slots.pddl)
 - first idea was to extend brick-level supporter constraint to cell-level (see [lego_beyond_tier2.pddl](src/domains/lego_beyond_tier2.pddl))
-    - ie brick can only be placed if all its studs that rest on other brick are supported 
+    - ie brick can only be placed if all its studs that rest on other bricks are supported 
     - problems:
         - number of predicates explodes exponentially in number of cells due to product 
         - domainbridge very laborious to define
@@ -288,13 +289,13 @@ The next two domains `lego_coarse_simple.pddl` and`lego_coarse_simple_v2.pddl` i
     - again for more details we refer to [report notebook](src/report.ipynb)
 - the main problem in tier 3/4 discussed in [next section](#34-neighbor-constraints)
 
-#### 3.3.2 [Layer Precedence](src/TODO)
+#### 3.3.2 [Layer Precedence](src/domains/levelwise/levelwise-precedence.pddl)
 Another approach to solve precedence issues involves declaring an ordering of all possible height levels within the PDDL domain. We require two forms of bookkeeping per action: Which level are we at, and how many bricks are left at each level. Corresponding fluents must be defined at the initialization of the bridge. The planner starts at ground level, with the `remaining`-predicate specifying how many bricks are left to place at this level. To count down, we have to introduce a successor relationship `succ` for the type `num`. Once all bricks of a level are placed, the planner symbolically "opens" the next level. This solves any vertical precedence issues, but we remain susceptible to bricks obstructing each other at the same level.
 
 ### 3.4 Neighbor Constraints
 There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
 
-#### 3.4.1 Supporter and Neighbor Constraints
+#### 3.4.1 [Supporter and Neighbor Constraints](src/domains/lego_beyond_tier2_access.pddl)
 - we realized that, if unlucky, planner chose order where brick unplacable as neighboring bricks obstruct robot arm along all axes
 - $\Rightarrow$ new assembly order constraint: place brick if there is a gripper-axis with no neighbor along that axis
 - $\Rightarrow$ [lego_beyond_tier2_access.pddl](src/domains/lego_beyond_tier2_access.pddl) 
@@ -303,21 +304,12 @@ There is always a possibility of bricks obstructing each other at the same heigh
 - however main difficulty is implementing the DomainBridge
 - TODO better gripper sequence: only open gripper slightly when releasing brick, then fully when in highest spot
 
-
-#### 3.4.2 [Layer Precedence_Axis_Aware](src/TODO)
+#### 3.4.2 [Layer Precedence_Axis_Aware](src/domains/levelwise/levelwise-precedence-axis-aware.pddl)
 To extend the layerwise-approach, again, pick-, place- and stack-actions must be split by axis so the planner can choose and consistently maintain the grasp orientation. Before we pick and place a block, the planner must verify that the target location is still neighborless for at least one axis. To this end, the bridge initializes neighbor-relations (`x-neighbor`/`y-neighbor`) between blocks' target locations, and initially equivalent checklist-relations (`x-to-be-checked`/`y-to-be-checked`), which are later falsified one-by-one by our check-actions (`check-x`/`check-y`). Since all checks must succeed right before picking and placing/stacking a block, it is important to precede the checks by a `select`-action. This is analogous to the layerwise precedence: Before, the planner counted down the number of blocks per layer before selecting the next one. Now we count down `x-checks-remaining`/`y-checks-remaining` before picking, placing/stacking and then selecting the next block, conveniently re-using the successor relationship `succ`.
-
-Note (TODO): If we do not manage to complete these, I would still include at least the domains to show that such adjustment is logically feasible. 
 
 ### 3.5 Comparison with ABD Baseline
 In our [evaluation](src/eval_baseline.ipynb), we collect statistics on success rate and planning time. Notably, the ABD baseline, as stated in the paper, fails even at some level 1&2 tasks. This clearly showcases indicates our comparison underlies a caveat: Our work does not include perception but works with the simulation's ground truth, a simplification that saves both overhead in time as well as errors. Therefore, we run an ABD planner's recipe through our executors and observe equivalent outcomes, but found at much faster planning speed, taking roughly a hundredth of time on average. Overall, our pipeline yields a 100% success rate for planning and execution across tier 1 and 2 of the WorkBenchMark dataset.
 
-## 4. Limitations
-Maybe some words on limitations (yea but more general like setup as domain-specific limitations already discussed)
-- e.g. stacking on multiple bricks as happens in Tier 3&4 (unless we find a fix)
-- also that our pipeline does no replanning, since we kinda don't need it atm
-- 
-## 5. Conclusion and Outlook
-- eg what can we say on the problem itself: it can be solved with PDDL in simplified sim env
-- what it reduces to (layer/supporter/neighbor order constraints)
-- ...
+
+## 4. Conclusion and Outlook
+Overall, our work consisted of multiple steps: Setting tasks up properly in a simplified environment proved to be a substantial challenge, requiring continuous adjustments. Thereafter, engineering the PDDL domains, despite being the major assignment, took surprisingly little effort, especially for Tier 1 & 2. Only for more complex stackings, where ordering must be further constrained, solutions proved more involved. Our two approaches to implement precedence for stackings strongly diverge, often generating different plans. Both can be extended to also avoid substantial a substantial portion of neighbor obstructions, respecting the need for a grasp-axis. The bridge, on the other hand, posed a limiting factor to experimentation: Changing predicates requires adjusted initialization of fluents, novel actions require new implementations. Therefore, this work could be continued by implementing a bridge that handles our axis-aware PDDL domains. An additional optimization could include a gripper that remains nearly as narrow as the approached grasp, which at times could overcome physical restrictions of the approach.
