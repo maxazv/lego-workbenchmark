@@ -145,7 +145,7 @@ From that state, PDDL gives us a plan (sequence of actions). Therefore we need t
 
 
 
-
+Below is a diagram that visualizes that link between the simulation environment and its PDDL abstraction.
 Let $s, s'$ be TAMPanda environemtn states and $t, t'$ PDDL symbolic states. Let *bridge* translate the symbolic action to a TAMPanda action and *ground* translate a TAMPanda state to a PDDL state:
 ```text
 
