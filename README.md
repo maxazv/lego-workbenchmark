@@ -44,6 +44,9 @@ The CSV has one row: `planned`, `plan_len`, `executed`, `goal_ok`, `max_dxy_mm`,
 `goal_ok=True` means every brick ended within 6 mm / 6 deg of its target pose.
 
 ### 1.5 Reproduce the results
+To reproduce the results we refer to the jupyter notebook [report.ipynb](src/report.ipynb).
+
+<!---
 All commands from `src/` 
 
 | What | Command | Output | Time |
@@ -62,11 +65,12 @@ Committed results (seed 0 for `eval.py`, seed 42 for `run_eval.py`):
 | slots + welds, success | 100 % | 100 % | 70 % | 27 % | `src/generated/evals/slots_t1234.csv` |
 | ABD order through our executor, success | 100 % | 100 % | | | `results/execution_seed42.csv` |
 | PDDL planning time per task | 0.05 s | 0.08 s | 0.08 s | 0.09 s | same files |
+-->
 
 ### 1.6 Notebooks (read in order in the best case)
 Start Jupyter from `src/` with the venv kernel: `cd src && python -m jupyterlab`
 
-1. `report.ipynb`: results per domain read from the CSVs above, with a rendered demo of one task each
+1. `report.ipynb`: results per domain, with rendered demos of some tasks
 2. `lego_coarse_simple.ipynb`: the pipeline on a single task, step by step with renders: load task, build scene, plan, execute, score.
 3. `beyond_tier2.ipynb`, `beyond_tier2_access.ipynb`: the tier 3 and 4 domains (multi-supporter slots, neighbour access) and their failure cases
 4. `eval_baseline.ipynb`: comparison with the assembly by disassembly baseline, planning and execution, plus the published numbers
@@ -86,7 +90,7 @@ git clone https://github.com/aibasel/downward.git && cd downward && ./build.py
 ---
 
 
-## 2. Project Structure (TODO)
+## 2. Project Structure
 
 ### 2.1 Overview
 ```mermaid
@@ -180,52 +184,109 @@ Notably, our blocks do not have any studs, nor does our environment include a gr
 In the following we give a "historical report" of our experiments and some results. Not every detail will be included but we tried to keep the repository as structured as possible without deleting any of our experiments.
 
 ### 3.1 First Attempts
-- where we didnt have simulation environment and were trying to figure out lego_sim
-- using quantifiers and other more advanced PDDL operators etc (see lego_coarse.pddl and lego_granular.pddl)
-- also assumed distractor blocks were present
-- only wanted to identify blocks by their shape/color instead of name/id => existential goal
+- didnt yet have a simulation environment and trying to figure out [lego_sim](https://github.com/ma-haha-hehe/lego_sim)
+- used quantifiers and other more advanced PDDL operators etc (see [lego_coarse.pddl](src/domains/lego_coarse.pddl) and [lego_granular.pddl](src/domains/lego_granular.pddl))
+- we assumed distractor blocks were present (not neccessary for assembly)
+- identify blocks by their shape/color instead of name/id $\Rightarrow$ existential goal
 - required us to plan using fast-downward
-- in next domains we omitted these and followed the exercise domains to be able to use DomainBridge
-- did some minor tests but was abandoned after we commited to TAMPanda env
+- omitted in next domains and followed the exercise domains to use DomainBridge
+- did minor tests but abandoned after we commited to TAMPanda environment
 
 ### 3.2 Single Supporter Constraints
-- lego_coarse_simple.pddl and lego_coarse_simple_v2
-- lego_coarse_simple.pddl was a nearly one-to-one copy of the exercise domains
-    - goals are now defined using brick names instead of existentials over shape/color etc
-    - we ignored obstruction as in analysis we realized bricks placed so that they are not obstructing
-    - problem was domainbridge mismatch where during unstack we assumed brick at target (but sometimes plan just placed in some random location)
-    - we realized that planner had too much freedom / was too expressive
+Now we present our domains that introduced the first necessary constraints for the assembly order: 
+For each plan if a brick is to be placed, all its supporter bricks must have been placed already. 
+A brick $B$ is a supporter of brick $A$ if $A$ rests directly on top of $A$. A brick can have several supporters but [analyzing](src/analysis.ipynb) the dataset we realized that for tier 1 and tier 2 a brick has at most one supporter.
+
+The next two domains `lego_coarse_simple.pddl` and`lego_coarse_simple_v2.pddl` implement this idea.
+
+#### 3.2.1 `lego_coarse_simple.pddl`
+- nearly one-to-one copy of the exercise domains
+- goals are now defined using brick names instead of existentials over shape/color etc
+- we ignored obstruction as in [analysis](src/analysis.ipynb) we realized bricks placed so they dont obstruct each other
+- problem was DomainBridge mismatch:
+    - during unstack action we assumed brick at target 
+    - but sometimes plan unnecessarily placed bricks in non-target locations
+    - thus needed to unstack/re-pick
+- we realized that planner had too much freedom / was too expressive
+
+**Summary Table: `lego_coarse_simple.pddl` without snapping/welds**
+| tier    |   tasks |   solved |   success% |   mean_plan_len |   mean_plan_s |   mean_exec_s |
+|:--------|--------:|---------:|------------:|----------------:|--------------:|--------------:|
+| tier1   |     100 |      100 |       100   |            4    |          0.09 |         29.48 |
+| tier2   |     100 |       35 |        35   |            7.92 |          0.06 |         35.31 |
+| Overall |     200 |      135 |        67.5 |            5.96 |          0.08 |         32.39 |
+
+#### 3.2.2 `lego_coarse_simple_v2.pddl`
 - for lego_coarse_simple_v2: with brick names, color/shape/location become unnecessary as target locs etc can all be handled by bridge
-    - only object type in domain is brick => all predicates are over bricks
-    - also we should never have to pick/unstack a brick once placed in a plan (and dont need locations as where target location is)
-    - => plan reduces to finding a good ordering of the bricks
-    - idea: a simple ordering constraint is that to place a brick any brick directly below it (supporter) must be placed
-    - this builds a supporter graph (specifically, directed acyclic graph)
-    - a valid brick placement order respecting the constraint is any topological sort of the DAG
-    - but one drawback is that stacked_on as defined in domain can only have one parent => see next domains
+- we realized that with brick names every other property (color/shape/location) becomes unnecessary
+    - can be pre-processed/derived in [SimpleLegoScene](src/scenes.py) and [DomainBridge](src/bridges.py)
+- thus only object type in domain is brick $\Rightarrow$ all predicates are over bricks
+- also we should never have to re-pick/unstack a brick once placed in a plan
+- thus plan reduces to finding a (pick, place) ordering of the bricks wrt some constraints
+- supporter constraint: to place a brick any brick its rests on (supporter) must be placed already
+    - constraint already present in `lego_coarse_simple.pddl` with `stacked_on` but made it core constraint in this domain
+- this builds a "supporter graph" which is a directed acyclic graphs (DAG) over bricks in the assembly
+- a valid assembly order respecting the constraint is any topological sort of the DAG
+
+**Summary Table: `lego_coarse_simple_v2.pddl` without snapping/welds**
+| tier    |   tasks |   solved |   success_% |   mean_plan_len |   mean_plan_s |   mean_exec_s |
+|:--------|--------:|---------:|------------:|----------------:|--------------:|--------------:|
+| tier1   |     100 |      100 |       100   |               4 |          0.07 |         29.59 |
+| tier2   |     100 |       63 |        63   |               6 |          0.29 |         43.24 |
+| Overall |     200 |      163 |        81.5 |               5 |          0.18 |         36.42 |
+
+- better than `lego_coarse_simple.pddl` because no unstack/re-pick errors
+- remaining errors due to bricks slipping (see [report notebook](src/report.ipynb) for more detail)
+- hence we added snapping/welding when releasing a brick and obtain the following results
+    - needed to manually write `PickPlaceExecutor.place` as brick needs to snap and then be welded *after* release
+
+**Summary Table: `lego_coarse_simple_v2.pddl` with snapping/welds**
+| tier    |   tasks |   solved |   success_% |   mean_plan_len |   mean_plan_s |   mean_exec_s |
+|:--------|--------:|---------:|------------:|----------------:|--------------:|--------------:|
+| tier1   |     100 |      100 |         100 |               4 |          0.05 |         29.53 |
+| tier2   |     100 |      100 |         100 |               6 |          0.08 |         42.75 |
+| Overall |     200 |      200 |         100 |               5 |          0.06 |         36.14 |
+
+- solves all tier 1/2 tasks 
+- one drawback is that `stacked_on` as defined in above domains can only have one supporter
+- tier 3/4 tasks have bricks with more supporters $\Rightarrow$ find no plans wiht above domains
+- $\Rightarrow$ see next domains
 
 ### 3.3 Going Beyond Tier 2: Vertical Precedence
 #### 3.3.1 Multi-Supporter Constraints
-- first idea was to extend supporter constraint to cell-level (lego_beyond_tier2.pddl)
-    - ie brick can only be placed if all the studs of the brick that have some support in target are supported
+- first idea was to extend brick-level supporter constraint to cell-level (see [lego_beyond_tier2.pddl](src/domains/lego_beyond_tier2.pddl))
+    - ie brick can only be placed if all its studs that rest on other brick are supported 
+    - problems:
+        - number of predicates explodes exponentially in number of cells due to product 
+        - domainbridge very laborious to define
     - pros: most general
-    - problems: product explodes exponentially in number of cells and domainbridge very laborious to define
-- => realized we can just go back to brick-level support and only brick relations (beyond_tier2_v2.pddl)
-    - now we can define multiple supporters per brick
-    - however first modeling attempt needed to use diff predicate to prevent planner from usign same brick in params
-    - inefficient
-- => new domain lego_beyond_tier2_slots.pddl introduces some tricks for more efficient planning:
-    - from dataset analysis (analysis.ipynb) we realized that in whole dataset a brick has at most 5 supporters
-    - => prepare_place takes fixed 5 args and use filler bricks if some brick has <5 supporters
-    - supporter{i} combines the diff and supporter predicate into one and optimizes parameter filtering in pyperplan
-    - problems: 
+- $\Rightarrow$ realized we can just go back to brick-level support 
+    - $\Rightarrow$ only brick relations (see [beyond_tier2_v2.pddl](src/domains/beyond_tier2_v2.pddl))
+    - now can define multiple supporters per brick
+    - however first modeling attempt needed to use `diff` predicate to prevent planner from usign same brick in params
+    - also still inefficient compared to next domain
+- $\Rightarrow$ new domain [lego_beyond_tier2_slots.pddl](src/domains/lego_beyond_tier2_slots.pddl) introduces tricks for more efficient planning:
+    - from [dataset analysis](src/analysis.ipynb) we saw that a brick has at most 5 supporters
+    - $\Rightarrow$ `prepare_place` takes fixed 5 args and if brick has <5 supporters use **filler bricks**
+    - `supporter{i}` combines the `diff` and `supporter` predicate into one and optimizes parameter domain reduction in pyperplan
+    - drawbacks: 
         - overfit on dataset because cant have more than 5 supporters
-            - but could just make script that automatically writes domain for some number of max supporters
-            - however lego bricks usually dont have that many supportes anyway
-            - otherwise if ever had 8x2 brick: break it apart into two 4x2 bricks and add constraints that they are together
-- introduced welding in bridge as bricks started to slip because T2 had overhangs (TODO: show demo)
-    - needed to manually write place as brick needs to snap and then be welded during after release
+            - however, could write script that automatically builds domain for some number of max supporters
+            - also, lego bricks usually dont have that many supportes anyway
+            - otherwise, if ever had 8x2 brick: break it apart into two 4x2 bricks and add constraints that they are together
 
+**Summary Table: `lego_beyond_tier2_slots.pddl` with snapping/welds**
+| tier    |   tasks |   solved |   success_% |   mean_plan_len |   mean_plan_s |   mean_exec_s |
+|:--------|--------:|---------:|------------:|----------------:|--------------:|--------------:|
+| tier1   |     100 |      100 |       100   |            6    |          0.08 |         31.16 |
+| tier2   |     100 |      100 |       100   |            9    |          0.06 |         48.2  |
+| tier3   |     100 |       70 |        70   |           18.96 |          0.08 |         84.32 |
+| tier4   |     100 |       27 |        27   |           26.31 |          0.09 |         99.08 |
+| Overall |     400 |      297 |        74.2 |           15.07 |          0.08 |         65.69 |
+
+- we solve all tasks in tier 1/2 and signifcant portion of tier 3 and some in tier 4
+    - again for more details we refer to [report notebook](src/report.ipynb)
+- the main problem in tier 3/4 discussed in [next section](#34-neighbor-constraints)
 
 #### 3.3.2 [Layer Precedence](src/TODO)
 Another approach to solve precedence issues involves declaring an ordering of all possible height levels within the PDDL domain. We require two forms of bookkeeping per action: Which level are we at, and how many bricks are left at each level. Corresponding fluents must be defined at the initialization of the bridge. The planner starts at ground level, with the `remaining`-predicate specifying how many bricks are left to place at this level. To count down, we have to introduce a successor relationship `succ` for the type `num`. Once all bricks of a level are placed, the planner symbolically "opens" the next level. This solves any vertical precedence issues, but we remain susceptible to bricks obstructing each other at the same level.
@@ -234,11 +295,12 @@ Another approach to solve precedence issues involves declaring an ordering of al
 There is always a possibility of bricks obstructing each other at the same height. For a grasp, the robot arm requires the target position to provide space on two opposing sides, i.e. either along the x-axis or y-axis. While some target configurations will always yield such issues no matter what plan, many such issues can be resolved if the right assembly order is chosen. Both the [Supporter Precedence](src/TODO) and the [Layer Precedence](src/TODO) approach can be adjusted to enforce placement of bricks only when one of the axes is free.
 
 #### 3.4.1 Supporter and Neighbor Constraints
-- we realized that if unlucky planner placed bricks within one layer st impossible to place brick without gripper obstruction
-- new ordering constraint: brick can be placed iff no neighbor along a gripper axis is placed 
-- => lego_beyond_tier2_access (its just lego_beyond_tier_2_slots + new constraint):
+- we realized that, if unlucky, planner chose order where brick unplacable as neighboring bricks obstruct robot arm along all axes
+- $\Rightarrow$ new assembly order constraint: place brick if there is a gripper-axis with no neighbor along that axis
+- $\Rightarrow$ [lego_beyond_tier2_access.pddl](src/domains/lego_beyond_tier2_access.pddl) 
+    - its essentially: [lego_beyond_tier_2_slots.pddl](src/domains/lego_beyond_tier2_slots.pddl) + neighbor constraint
 - requires domain to also know along which axis brick WILL be placed
-- however main difficulty is the executor
+- however main difficulty is implementing the DomainBridge
 - TODO better gripper sequence: only open gripper slightly when releasing brick, then fully when in highest spot
 
 
